@@ -74,7 +74,6 @@ def toflatbuffers(builder, interp):
     if isinstance(interp, uproot.asdtype):
         if interp.fromdtype.names is None and interp.todtype.names is None:
             fromdtype = dtype2fb(interp.fromdtype)
-
             if interp.fromdtype.kind == interp.todtype.kind and interp.fromdtype.itemsize == interp.todtype.itemsize:
                 todtype = uproot_skyhook.interpretation.DType.DType.dtype_unspecified
             else:
@@ -86,33 +85,88 @@ def toflatbuffers(builder, interp):
             todims = None if interp.todtype.subdtype is None else interp.todtype.subdtype[1]
 
             if fromdims is not None:
-                uproot_skyhook.interpretation.Flat.FlatStartFromdimsVector(builder, len(fromdims))
+                uproot_skyhook.interpretation.Primitive.PrimitiveStartDimsVector(builder, len(fromdims))
                 for x in fromdims[::-1]:
                     builder.PrependUInt(x)
                 fromdims = builder.EndVector(len(fromdims))
 
+            uproot_skyhook.interpretation.Primitive.PrimitiveStart(builder)
+            uproot_skyhook.interpretation.Primitive.PrimitiveAddDtype(fromdtype)
+            uproot_skyhook.interpretation.Primitive.PrimitiveAddBigendian(frombigendian)
+            if fromdims is not None:
+                uproot_skyhook.interpretation.Primitive.PrimitiveAddDims(fromdims)
+            fromtype = uproot_skyhook.interpretation.Primitive.PrimitiveEnd(builder)
+
             if todims is not None:
-                uproot_skyhook.interpretation.Flat.FlatStartTodimsVector(builder, len(todims))
+                uproot_skyhook.interpretation.Primitive.PrimitiveStartDimsVector(builder, len(todims))
                 for x in todims[::-1]:
                     builder.PrependUInt(x)
                 todims = builder.EndVector(len(todims))
 
-            uproot_skyhook.interpretation.Flat.FlatStart(builder)
-            uproot_skyhook.interpretation.Flat.FlatAddFromdtype(fromdtype)
-            if todtype != uproot_skyhook.interpretation.DType.DType.dtype_unspecified:
-                uproot_skyhook.interpretation.Flat.FlatAddTodtype(todtype)
-            if frombigendian is not True:
-                uproot_skyhook.interpretation.Flat.FlatAddFrombigendian(frombigendian)
-            if tobigendian is not True:
-                uproot_skyhook.interpretation.Flat.FlatAddTobigendian(tobigendian)
-            if fromdims is not None:
-                uproot_skyhook.interpretation.Flat.FlatAddFromdims(fromdims)
+            uproot_skyhook.interpretation.Primitive.PrimitiveStart(builder)
+            uproot_skyhook.interpretation.Primitive.PrimitiveAddDtype(todtype)
+            uproot_skyhook.interpretation.Primitive.PrimitiveAddBigendian(tobigendian)
             if todims is not None:
-                uproot_skyhook.interpretation.Flat.FlatAddTodims(todims)
+                uproot_skyhook.interpretation.Primitive.PrimitiveAddDims(todims)
+            totype = uproot_skyhook.interpretation.Primitive.PrimitiveEnd(builder)
+
+            uproot_skyhook.interpretation.Flat.FlatStart(builder)
+            uproot_skyhook.interpretation.Flat.FlatFromtype(fromtype)
+            uproot_skyhook.interpretation.Flat.FlatTotype(totype)
             return uproot_skyhook.interpretation.Flat.FlatEnd(builder)
 
         elif interp.fromdtype.names is not None and interp.todtype.names is not None:
-            raise NotImplementedError
+            fromtypes = []
+            for name in interp.fromdtype.names:
+                dt = dtype2fb(interp.fromdtype[name])
+                big = (interp.fromdtype[name].byteorder == ">") or (interp.fromdtype[name].byteorder == "=" and sys.byteorder == "big")
+                if interp.fromdtype[name].subdtype is not None:
+                    raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
+                uproot_skyhook.interpretation.Primitive.PrimitiveStart(builder)
+                uproot_skyhook.interpretation.Primitive.PrimitiveAddDtype(dt)
+                uproot_skyhook.interpretation.Primitive.PrimitiveAddBigendian(big)
+                fromtypes.append(uproot_skyhook.interpretation.Primitive.PrimitiveEnd(builder))
+
+            totypes = []
+            for name in interp.todtype.names:
+                dt = dtype2fb(interp.todtype[name])
+                big = (interp.todtype[name].byteorder == ">") or (interp.todtype[name].byteorder == "=" and sys.byteorder == "big")
+                if interp.todtype[name].subdtype is not None:
+                    raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
+                uproot_skyhook.interpretation.Primitive.PrimitiveStart(builder)
+                uproot_skyhook.interpretation.Primitive.PrimitiveAddDtype(dt)
+                uproot_skyhook.interpretation.Primitive.PrimitiveAddBigendian(big)
+                totypes.append(uproot_skyhook.interpretation.Primitive.PrimitiveEnd(builder))
+
+            fromnames = [builder.CreateString(x.encode("utf-8")) for x in interp.fromdtype.names]
+            tonames = [builder.CreateString(x.encode("utf-8")) for x in interp.todtype.names]
+
+            uproot_skyhook.interpretation.Record.RecordStartFromtypesVector(builder, len(fromtypes))
+            for x in fromtypes[::-1]:
+                builder.PrependUOffsetTRelative(x)
+            fromtypes = builder.EndVector(len(fromtypes))
+
+            uproot_skyhook.interpretation.Record.RecordStartTotypesVector(builder, len(totypes))
+            for x in totypes[::-1]:
+                builder.PrependUOffsetTRelative(x)
+            totypes = builder.EndVector(len(totypes))
+
+            uproot_skyhook.interpretation.Record.RecordStartFromnamesVector(builder, len(fromnames))
+            for x in fromnames[::-1]:
+                builder.PrependUOffsetTRelative(x)
+            fromnames = builder.EndVector(len(fromnames))
+
+            uproot_skyhook.interpretation.Record.RecordStartTonamesVector(builder, len(tonames))
+            for x in tonames[::-1]:
+                builder.PrependUOffsetTRelative(x)
+            tonames = builder.EndVector(len(tonames))
+
+            uproot_skyhook.interpretation.Record.RecordStart(builder)
+            uproot_skyhook.interpretation.Record.RecordAddFromtypes(fromtypes)
+            uproot_skyhook.interpretation.Record.RecordAddTotypes(totypes)
+            uproot_skyhook.interpretation.Record.RecordAddFromnames(fromnames)
+            uproot_skyhook.interpretation.Record.RecordAddTonames(tonames)
+            return uproot_skyhook.interpretation.Record.RecordEnd(builder)
 
         else:
             raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))

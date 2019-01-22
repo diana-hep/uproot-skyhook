@@ -43,21 +43,22 @@ enum DType: byte {
   dtype_float64 = 11
 }
 
+table Primitive {
+  dtype: DType;
+  bigendian: bool;
+  dims: [uint];
+}
+
 table Flat {
-  fromdtype: DType;
-  todtype: DType = dtype_unspecified;
-  frombigendian: bool = true;
-  tobigendian: bool = false;
-  fromdims: [uint];
-  todims: [uint];
+  fromtype: Primitive;
+  totype: Primitive;
 }
 
 table Record {
+  fromtypes: [Primitive];
+  totypes: [Primitive];
   fromnames: [string];
-  fromtypes: [DType];
   tonames: [string];
-  totypes: [DType];
-  tobigendian: bool = false;
 }
 
 table Double32 {
