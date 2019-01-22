@@ -120,3 +120,13 @@ class Column(Layout):
         self.interp = interp
         self.title = title
         self.aliases = aliases
+
+class File(Layout):
+    location = uproot_skyhook.lazyobject.lazyproperty("location", lambda x: x.decode("utf-8"))
+    uuid = uproot_skyhook.lazyobject.lazyproperty("uuid", lambda x: x.decode("utf-8"))
+    branches = uproot_skyhook.lazyobject.lazyproperty("branches", Branch.fromflatbuffers)
+
+    def __init__(self, location, uuid, branches):
+        self.location = location
+        self.uuid = uuid4
+        self.branches = branches
