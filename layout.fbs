@@ -26,4 +26,59 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+include "interpretation.fbs";
+
 namespace uproot_skyhook.layout;
+
+enum CompressionAlgo: byte {
+  none = 0,
+  zlib = 1,
+  lzma = 2,
+  old = 3,
+  lz4 = 4
+}
+
+table Basket {
+  seekkey: ulong;
+  algos: [CompressionAlgo] (required);
+  seekdata: [ulong] (required);
+  compressedbytes: [int] (required);
+  uncompressedbytes: [int] (required);
+  border: ulong;
+}
+
+table ColumnInFile {
+  entries: [ulong] (required);
+  baskets: [Basket] (required);
+}
+
+table Column {
+  name: string (required);
+  interp: uproot_skyhook.interpretation.Interpretation (required);
+  title: string;
+  aliases: [string];
+  metadata: string;
+}
+
+table File {
+  location: string (required);
+  uuid: string (required);
+  columns: [ColumnInFile] (required);  // one for each column
+  numentries: ulong;
+  objname: string;                     // if present, overrides Dataset.objname
+  metadata: string;
+}
+
+table Dataset {
+  name: string (required);
+  objname: string (required);
+  columns: [Column] (required);
+  files: [File] (required);
+  location_prefix: string;
+  numentries: ulong;
+  metadata: string;
+}
+
+file_extension "rootlayout";
+file_identifier "roly";
+root_type Dataset;
