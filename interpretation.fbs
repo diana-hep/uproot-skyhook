@@ -82,14 +82,14 @@ union FlatInterpretation {
 
 table Jagged {
   content: FlatInterpretation;
-  skipbytes: int = 0;
+  skipbytes: int;
 }
 
 table String {
-  skipbytes: int = 0;
+  skipbytes: int;
 }
 
-table FlatObj {
+table TableObj {
   content: FlatInterpretation (required);
   qualname: [string];
 }
@@ -101,5 +101,5 @@ union Interpretation {
   STLBitSet,
   Jagged,
   String,
-  FlatObj
+  TableObj
 }

@@ -203,13 +203,29 @@ def toflatbuffers(builder, interp):
         return uproot_skyhook.interpretation.STLBitSet.STLBitSetEnd(builder)
 
     elif isinstance(interp, uproot.asjagged):
-        raise NotImplementedError
+        content = toflatbuffers(builder, interp.content)
+        uproot_skyhook.interpretation.Jagged.JaggedStart(builder)
+        uproot_skyhook.interpretation.Jagged.JaggedAddContent(content)
+        uproot_skyhook.interpretation.Jagged.JaggedAddSkipbytes(interp.skipbytes)
+        return uproot_skyhook.interpretation.Jagged.JaggedEnd(builder)
 
     elif isinstance(interp, uproot.asstring):
-        raise NotImplementedError
+        uproot_skyhook.interpretation.String.StringStart(builder)
+        uproot_skyhook.interpretation.String.StringAddSkipbytes(interp.skipbytes)
+        return uproot_skyhook.interpretation.String.StringEnd(builder)
 
-    elif isinstance(interp, uproot.asobj):
-        raise NotImplementedError
+    elif isinstance(interp, uproot.asobj) and isinstance(interp.content, uproot.astable):
+        content = toflatbuffers(builder, interp.content.content)
+        qualname = [builder.CreateString(x.encode("utf-8")) for x in (interp.cls.__module__, interp.cls.__name__)]
+        uproot_skyhook.interpretation.TableObj.TableObjStartQualnameVector(builder, len(qualname))
+        for x in qualname[::-1]:
+            builder.PrependUOffsetTRelative(x)
+        qualname = builder.EndVector(len(qualname))
+
+        uproot_skyhook.interpretation.TableObj.TableObjStart(builder)
+        uproot_skyhook.interpretation.TableObj.TableObjAddContent(content)
+        uproot_skyhook.interpretation.TableObj.TableObjAddQualname(qualname)
+        return uproot_skyhook.interpretation.TableObj.TableObjEnd(builder)
 
     else:
         raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
