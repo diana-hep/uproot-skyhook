@@ -31,6 +31,7 @@ import flatbuffers
 
 import uproot
 import uproot_skyhook.interpretation
+import uproot_skyhook.lazyobject
 import uproot_skyhook.layout_generated.Compression
 import uproot_skyhook.layout_generated.Page
 import uproot_skyhook.layout_generated.Basket
@@ -65,11 +66,57 @@ lzma = Compression("lzma", uproot_skyhook.layout_generated.Compression.Compressi
 old  = Compression("old",  uproot_skyhook.layout_generated.Compression.Compression.old)
 lz4  = Compression("lz4",  uproot_skyhook.layout_generated.Compression.Compression.lz4)
 
-class Layout(object): pass
+compressions = {
+    uproot_skyhook.layout_generated.Compression.Compression.none: none,
+    uproot_skyhook.layout_generated.Compression.Compression.zlib: zlib,
+    uproot_skyhook.layout_generated.Compression.Compression.lzma: lzma,
+    uproot_skyhook.layout_generated.Compression.Compression.old: old,
+    uproot_skyhook.layout_generated.Compression.Compression.lz4: lz4,
+    }
+
+class Layout(object):
+    @classmethod
+    def fromflatbuffers(cls, flatbuffers):
+        self = cls.__new__(cls)
+        self._flatbuffers = flatbuffers
+        return self
 
 class Page(Layout):
+    file_seek = uproot_skyhook.lazyobject.lazyproperty("file_seek", lambda x: x)
+    compressedbytes = uproot_skyhook.lazyobject.lazyproperty("compressedbytes", lambda x: x)
+    uncompressedbytes = uproot_skyhook.lazyobject.lazyproperty("uncompressedbytes", lambda x: x)
+
     def __init__(self, file_seek, compressedbytes, uncompressedbytes):
         self.file_seek = file_seek
         self.compressedbytes = compressedbytes
         self.uncompressedbytes = uncompressedbytes
 
+class Basket(Layout):
+    compression = uproot_skyhook.lazyobject.lazyproperty("compression", lambda x: compressions[x])
+    pages = uproot_skyhook.lazyobject.lazyproperty("pages", Page.fromflatbuffers)
+    data_border = uproot_skyhook.lazyobject.lazyproperty("data_border", lambda x: x)
+
+    def __init__(self, compression, pages, data_border):
+        self.compression = compression
+        self.pages = pages
+        self.data_border = data_border
+
+class Branch(Layout):
+    local_offsets = uproot_skyhook.lazyobject.lazyproperty("local_offsets", lambda x: x)
+    baskets = uproot_skyhook.lazyobject.lazyproperty("baskets", Basket.fromflatbuffers)
+
+    def __init__(self, local_offsets, baskets):
+        self.local_offsets = local_offsets
+        self.baskets = baskets
+
+class Column(Layout):
+    name = uproot_skyhook.lazyobject.lazyproperty("name", lambda x: x.decode("utf-8"))
+    interp = uproot_skyhook.lazyobject.lazyproperty("interp", uproot_skyhook.interpretation.interp_fromflatbuffers)
+    title = uproot_skyhook.lazyobject.lazyproperty("title", lambda x: x.decode("utf-8"))
+    aliases = uproot_skyhook.lazyobject.lazyproperty("aliases", lambda x: x.decode("utf-8"))
+
+    def __init__(self, name, interp, title, aliases):
+        self.name = name
+        self.interp = interp
+        self.title = title
+        self.aliases = aliases

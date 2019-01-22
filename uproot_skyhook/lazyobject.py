@@ -75,7 +75,7 @@ class LazyList(Sequence):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-def lazyproperty(name):
+def lazyproperty(name, finalize):
     def name2fb(name):
         return "".join(x.capitalize() for x in name.split("_"))
 
@@ -89,9 +89,9 @@ def lazyproperty(name):
         fblenname = fbname + "Length"
         lenmethod = getattr(self._flatbuffers, fblenname, None)
         if lenmethod is None:
-            out = getattr(self._flatbuffers, fbname)()
+            out = finalize(getattr(self._flatbuffers, fbname)())
         else:
-            out = LazyList(getattr(self._flatbuffers, fbname), lenmethod())
+            out = LazyList(lambda: finalize(getattr(self._flatbuffers, fbname)()), lenmethod())
         setattr(self, "_" + name, out)
         return out
 
