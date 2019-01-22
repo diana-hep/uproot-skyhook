@@ -143,7 +143,12 @@ def interp_fromflatbuffers(fb):
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.Double32:
         fb2 = uproot_skyhook.interpretation.Double32.Double32()
         fb2.Init(data.Bytes, data.Pos)
-        raise Exception
+        low = fb2.Low()
+        high = fb2.High()
+        numbits = fb2.Numbits()
+        fromdims = tuple(fb2.Fromdims(i) for i in range(fb2.FromdimsLength()))
+        todims = tuple(fb2.Todims(i) for i in range(fb2.TodimsLength()))
+        return uproot.asdouble32(low, high, numbits, fromdims, todims)
 
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.STLBitSet:
         fb2 = uproot_skyhook.interpretation.STLBitSet.STLBitSet()
@@ -277,7 +282,7 @@ def interp_toflatbuffers(builder, interp):
 
     elif isinstance(interp, uproot.asdouble32):
         fromdims = None if len(interp.fromdims) is None else interp.fromdims
-        todims = None if len(interp.todims) is None else interp.todims
+        todims = None if interp.todims is None or len(interp.todims) is None else interp.todims
 
         if fromdims is not None:
             uproot_skyhook.interpretation.Double32.Double32StartFromdimsVector(builder, len(fromdims))

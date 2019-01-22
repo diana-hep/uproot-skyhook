@@ -46,7 +46,7 @@ class Test(unittest.TestCase):
         serialized = builder.Output()
         assert uproot_skyhook.serialization.interp_frombuffer(serialized).identifier == interp.identifier
 
-    def test_serialization_asdtype(self):
+    def test_serialization_asdtype_flat(self):
         self.roundtrip_interp(uproot.asdtype(numpy.bool_))
         self.roundtrip_interp(uproot.asdtype("i1"))
         self.roundtrip_interp(uproot.asdtype("<i2"))
@@ -107,4 +107,8 @@ class Test(unittest.TestCase):
         self.roundtrip_interp(uproot.asdtype(("<f8", 10)))
         self.roundtrip_interp(uproot.asdtype((">f8", 10)))
 
+    def test_serialization_asdtype_record(self):
         self.roundtrip_interp(uproot.asdtype([("one", int), ("two", float), ("three", bool)]))
+
+    def test_serialization_asdouble32(self):
+        self.roundtrip_interp(uproot.asdouble32(3.14, 99.9, 10))
