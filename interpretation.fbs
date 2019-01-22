@@ -1,0 +1,91 @@
+// Copyright (c) 2019, IRIS-HEP
+// All rights reserved.
+// 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 
+// * Redistributions of source code must retain the above copyright notice, this
+//   list of conditions and the following disclaimer.
+// 
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+// 
+// * Neither the name of the copyright holder nor the names of its
+//   contributors may be used to endorse or promote products derived from
+//   this software without specific prior written permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+namespace uproot_skyhook.interpretation;
+
+enum DType: byte {
+  dtype_unspecified = 0,
+  dtype_int8 = 1,
+  dtype_uint8 = 2,
+  dtype_int16 = 3,
+  dtype_uint16 = 4,
+  dtype_int32 = 5,
+  dtype_uint32 = 6,
+  dtype_int64 = 7,
+  dtype_uint64 = 8,
+  dtype_float32 = 9,
+  dtype_float64 = 10
+}
+
+table Array {
+  fromdtype: DType;
+  todtype: DType = dtype_unspecified;
+  tobigendian: bool = false;
+  fromdims: [uint];
+  todims: [uint];
+}
+
+table Double32 {
+  low: double;
+  high: double;
+  numbits: int;
+  todims: [uint];
+}
+
+table STLBitSet {
+  numbytes: int;
+}
+
+union FlatInterpretation {
+  Array,
+  Double32,
+  STLBitSet
+}
+
+table Jagged {
+  content: FlatInterpretation;
+  skipbytes: int = 0;
+}
+
+table String {
+  skipbytes: int = 0;
+}
+
+table FlatObj {
+  content: FlatInterpretation (required);
+  qualname: [string];
+}
+
+union Interpretation {
+  Array,
+  Double32,
+  STLBitSet,
+  Jagged,
+  String,
+  FlatObj
+}
