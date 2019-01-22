@@ -33,51 +33,51 @@ import numpy
 import flatbuffers
 
 import uproot
-import uproot_skyhook.interpretation.DType
-import uproot_skyhook.interpretation.Primitive
-import uproot_skyhook.interpretation.Flat
-import uproot_skyhook.interpretation.Record
-import uproot_skyhook.interpretation.Double32
-import uproot_skyhook.interpretation.STLBitSet
-import uproot_skyhook.interpretation.Jagged
-import uproot_skyhook.interpretation.String
-import uproot_skyhook.interpretation.TableObj
-import uproot_skyhook.interpretation.InterpretationData
-import uproot_skyhook.interpretation.Interpretation
+import uproot_skyhook.interpretation_generated.DType
+import uproot_skyhook.interpretation_generated.Primitive
+import uproot_skyhook.interpretation_generated.Flat
+import uproot_skyhook.interpretation_generated.Record
+import uproot_skyhook.interpretation_generated.Double32
+import uproot_skyhook.interpretation_generated.STLBitSet
+import uproot_skyhook.interpretation_generated.Jagged
+import uproot_skyhook.interpretation_generated.String
+import uproot_skyhook.interpretation_generated.TableObj
+import uproot_skyhook.interpretation_generated.InterpretationData
+import uproot_skyhook.interpretation_generated.Interpretation
 
 def dtype2fb(dtype):
     if dtype.kind == "b":
-        return uproot_skyhook.interpretation.DType.DType.dtype_bool
+        return uproot_skyhook.interpretation_generated.DType.DType.dtype_bool
 
     elif dtype.kind == "i":
         if dtype.itemsize == 1:
-            return uproot_skyhook.interpretation.DType.DType.dtype_int8
+            return uproot_skyhook.interpretation_generated.DType.DType.dtype_int8
         elif dtype.itemsize == 2:
-            return uproot_skyhook.interpretation.DType.DType.dtype_int16
+            return uproot_skyhook.interpretation_generated.DType.DType.dtype_int16
         elif dtype.itemsize == 4:
-            return uproot_skyhook.interpretation.DType.DType.dtype_int32
+            return uproot_skyhook.interpretation_generated.DType.DType.dtype_int32
         elif dtype.itemsize == 8:
-            return uproot_skyhook.interpretation.DType.DType.dtype_int64
+            return uproot_skyhook.interpretation_generated.DType.DType.dtype_int64
         else:
             raise NotImplementedError("SkyHook layout of {0} not implemented".format(repr(dtype)))
 
     elif dtype.kind == "u":
         if dtype.itemsize == 1:
-            return uproot_skyhook.interpretation.DType.DType.dtype_uint8
+            return uproot_skyhook.interpretation_generated.DType.DType.dtype_uint8
         elif dtype.itemsize == 2:
-            return uproot_skyhook.interpretation.DType.DType.dtype_uint16
+            return uproot_skyhook.interpretation_generated.DType.DType.dtype_uint16
         elif dtype.itemsize == 4:
-            return uproot_skyhook.interpretation.DType.DType.dtype_uint32
+            return uproot_skyhook.interpretation_generated.DType.DType.dtype_uint32
         elif dtype.itemsize == 8:
-            return uproot_skyhook.interpretation.DType.DType.dtype_uint64
+            return uproot_skyhook.interpretation_generated.DType.DType.dtype_uint64
         else:
             raise NotImplementedError("SkyHook layout of {0} not implemented".format(repr(dtype)))
 
     elif dtype.kind == "f":
         if dtype.itemsize == 4:
-            return uproot_skyhook.interpretation.DType.DType.dtype_float32
+            return uproot_skyhook.interpretation_generated.DType.DType.dtype_float32
         elif dtype.itemsize == 8:
-            return uproot_skyhook.interpretation.DType.DType.dtype_float64
+            return uproot_skyhook.interpretation_generated.DType.DType.dtype_float64
         else:
             raise NotImplementedError("SkyHook layout of {0} not implemented".format(repr(dtype)))
 
@@ -85,28 +85,28 @@ def dtype2fb(dtype):
         raise NotImplementedError("SkyHook layout of {0} not implemented".format(repr(dtype)))
 
 fb2dtype = {
-    uproot_skyhook.interpretation.DType.DType.dtype_bool: numpy.dtype(numpy.bool_),
-    uproot_skyhook.interpretation.DType.DType.dtype_int8: numpy.dtype(numpy.int8),
-    uproot_skyhook.interpretation.DType.DType.dtype_int16: numpy.dtype(numpy.int16),
-    uproot_skyhook.interpretation.DType.DType.dtype_int32: numpy.dtype(numpy.int32),
-    uproot_skyhook.interpretation.DType.DType.dtype_int64: numpy.dtype(numpy.int64),
-    uproot_skyhook.interpretation.DType.DType.dtype_uint8: numpy.dtype(numpy.uint8),
-    uproot_skyhook.interpretation.DType.DType.dtype_uint16: numpy.dtype(numpy.uint16),
-    uproot_skyhook.interpretation.DType.DType.dtype_uint32: numpy.dtype(numpy.uint32),
-    uproot_skyhook.interpretation.DType.DType.dtype_uint64: numpy.dtype(numpy.uint64),
-    uproot_skyhook.interpretation.DType.DType.dtype_float32: numpy.dtype(numpy.float32),
-    uproot_skyhook.interpretation.DType.DType.dtype_float64: numpy.dtype(numpy.float64),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_bool: numpy.dtype(numpy.bool_),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_int8: numpy.dtype(numpy.int8),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_int16: numpy.dtype(numpy.int16),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_int32: numpy.dtype(numpy.int32),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_int64: numpy.dtype(numpy.int64),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_uint8: numpy.dtype(numpy.uint8),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_uint16: numpy.dtype(numpy.uint16),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_uint32: numpy.dtype(numpy.uint32),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_uint64: numpy.dtype(numpy.uint64),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_float32: numpy.dtype(numpy.float32),
+    uproot_skyhook.interpretation_generated.DType.DType.dtype_float64: numpy.dtype(numpy.float64),
     }
 
 def interp_frombuffer(buffer, offset=0):
-    return interp_fromflatbuffers(uproot_skyhook.interpretation.Interpretation.Interpretation.GetRootAsInterpretation(buffer, offset))
+    return interp_fromflatbuffers(uproot_skyhook.interpretation_generated.Interpretation.Interpretation.GetRootAsInterpretation(buffer, offset))
 
 def interp_fromflatbuffers(fb):
     datatype = fb.DataType()
     data = fb.Data()
 
-    if datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.Flat:
-        fb2 = uproot_skyhook.interpretation.Flat.Flat()
+    if datatype == uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.Flat:
+        fb2 = uproot_skyhook.interpretation_generated.Flat.Flat()
         fb2.Init(data.Bytes, data.Pos)
         fromtype = fb2.Fromtype()
         totype = fb2.Totype()
@@ -123,8 +123,8 @@ def interp_fromflatbuffers(fb):
 
         return uproot.asdtype(fromdtype, todtype)
 
-    elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.Record:
-        fb2 = uproot_skyhook.interpretation.Record.Record()
+    elif datatype == uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.Record:
+        fb2 = uproot_skyhook.interpretation_generated.Record.Record()
         fb2.Init(data.Bytes, data.Pos)
 
         fromtypes = []
@@ -141,8 +141,8 @@ def interp_fromflatbuffers(fb):
 
         return uproot.asdtype(numpy.dtype(fromtypes), numpy.dtype(totypes))
 
-    elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.Double32:
-        fb2 = uproot_skyhook.interpretation.Double32.Double32()
+    elif datatype == uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.Double32:
+        fb2 = uproot_skyhook.interpretation_generated.Double32.Double32()
         fb2.Init(data.Bytes, data.Pos)
         low = fb2.Low()
         high = fb2.High()
@@ -151,23 +151,23 @@ def interp_fromflatbuffers(fb):
         todims = tuple(fb2.Todims(i) for i in range(fb2.TodimsLength()))
         return uproot.asdouble32(low, high, numbits, fromdims, todims)
 
-    elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.STLBitSet:
-        fb2 = uproot_skyhook.interpretation.STLBitSet.STLBitSet()
+    elif datatype == uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.STLBitSet:
+        fb2 = uproot_skyhook.interpretation_generated.STLBitSet.STLBitSet()
         fb2.Init(data.Bytes, data.Pos)
         return uproot.asstlbitset(fb2.Numbytes())
 
-    elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.Jagged:
-        fb2 = uproot_skyhook.interpretation.Jagged.Jagged()
+    elif datatype == uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.Jagged:
+        fb2 = uproot_skyhook.interpretation_generated.Jagged.Jagged()
         fb2.Init(data.Bytes, data.Pos)
         return uproot.asjagged(interp_fromflatbuffers(fb2.Content()), fb2.Skipbytes())
 
-    elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.String:
-        fb2 = uproot_skyhook.interpretation.String.String()
+    elif datatype == uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.String:
+        fb2 = uproot_skyhook.interpretation_generated.String.String()
         fb2.Init(data.Bytes, data.Pos)
         return uproot.asstring(fb2.Skipbytes())
 
-    elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.TableObj:
-        fb2 = uproot_skyhook.interpretation.TableObj.TableObj()
+    elif datatype == uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.TableObj:
+        fb2 = uproot_skyhook.interpretation_generated.TableObj.TableObj()
         fb2.Init(data.Bytes, data.Pos)
 
         content = interp_fromflatbuffers(fb2.Content())
@@ -200,36 +200,36 @@ def interp_toflatbuffers(builder, interp):
             tobigendian = (todt.byteorder == ">") or (todt.byteorder == "=" and sys.byteorder == "big")
 
             if fromdims is not None:
-                uproot_skyhook.interpretation.Primitive.PrimitiveStartDimsVector(builder, len(fromdims))
+                uproot_skyhook.interpretation_generated.Primitive.PrimitiveStartDimsVector(builder, len(fromdims))
                 for x in fromdims[::-1]:
                     builder.PrependUint32(x)
                 fromdims = builder.EndVector(len(fromdims))
 
-            uproot_skyhook.interpretation.Primitive.PrimitiveStart(builder)
-            uproot_skyhook.interpretation.Primitive.PrimitiveAddDtype(builder, fromdtype)
-            uproot_skyhook.interpretation.Primitive.PrimitiveAddBigendian(builder, frombigendian)
+            uproot_skyhook.interpretation_generated.Primitive.PrimitiveStart(builder)
+            uproot_skyhook.interpretation_generated.Primitive.PrimitiveAddDtype(builder, fromdtype)
+            uproot_skyhook.interpretation_generated.Primitive.PrimitiveAddBigendian(builder, frombigendian)
             if fromdims is not None:
-                uproot_skyhook.interpretation.Primitive.PrimitiveAddDims(builder, fromdims)
-            fromtype = uproot_skyhook.interpretation.Primitive.PrimitiveEnd(builder)
+                uproot_skyhook.interpretation_generated.Primitive.PrimitiveAddDims(builder, fromdims)
+            fromtype = uproot_skyhook.interpretation_generated.Primitive.PrimitiveEnd(builder)
 
             if todims is not None:
-                uproot_skyhook.interpretation.Primitive.PrimitiveStartDimsVector(builder, len(todims))
+                uproot_skyhook.interpretation_generated.Primitive.PrimitiveStartDimsVector(builder, len(todims))
                 for x in todims[::-1]:
                     builder.PrependUint32(x)
                 todims = builder.EndVector(len(todims))
 
-            uproot_skyhook.interpretation.Primitive.PrimitiveStart(builder)
-            uproot_skyhook.interpretation.Primitive.PrimitiveAddDtype(builder, todtype)
-            uproot_skyhook.interpretation.Primitive.PrimitiveAddBigendian(builder, tobigendian)
+            uproot_skyhook.interpretation_generated.Primitive.PrimitiveStart(builder)
+            uproot_skyhook.interpretation_generated.Primitive.PrimitiveAddDtype(builder, todtype)
+            uproot_skyhook.interpretation_generated.Primitive.PrimitiveAddBigendian(builder, tobigendian)
             if todims is not None:
-                uproot_skyhook.interpretation.Primitive.PrimitiveAddDims(builder, todims)
-            totype = uproot_skyhook.interpretation.Primitive.PrimitiveEnd(builder)
+                uproot_skyhook.interpretation_generated.Primitive.PrimitiveAddDims(builder, todims)
+            totype = uproot_skyhook.interpretation_generated.Primitive.PrimitiveEnd(builder)
 
-            uproot_skyhook.interpretation.Flat.FlatStart(builder)
-            uproot_skyhook.interpretation.Flat.FlatAddFromtype(builder, fromtype)
-            uproot_skyhook.interpretation.Flat.FlatAddTotype(builder, totype)
-            data = uproot_skyhook.interpretation.Flat.FlatEnd(builder)
-            datatype = uproot_skyhook.interpretation.InterpretationData.InterpretationData.Flat
+            uproot_skyhook.interpretation_generated.Flat.FlatStart(builder)
+            uproot_skyhook.interpretation_generated.Flat.FlatAddFromtype(builder, fromtype)
+            uproot_skyhook.interpretation_generated.Flat.FlatAddTotype(builder, totype)
+            data = uproot_skyhook.interpretation_generated.Flat.FlatEnd(builder)
+            datatype = uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.Flat
 
         elif interp.fromdtype.names is not None and interp.todtype.names is not None:
             fromtypes = []
@@ -238,10 +238,10 @@ def interp_toflatbuffers(builder, interp):
                 big = (interp.fromdtype[name].byteorder == ">") or (interp.fromdtype[name].byteorder == "=" and sys.byteorder == "big")
                 if interp.fromdtype[name].subdtype is not None:
                     raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
-                uproot_skyhook.interpretation.Primitive.PrimitiveStart(builder)
-                uproot_skyhook.interpretation.Primitive.PrimitiveAddDtype(builder, dt)
-                uproot_skyhook.interpretation.Primitive.PrimitiveAddBigendian(builder, big)
-                fromtypes.append(uproot_skyhook.interpretation.Primitive.PrimitiveEnd(builder))
+                uproot_skyhook.interpretation_generated.Primitive.PrimitiveStart(builder)
+                uproot_skyhook.interpretation_generated.Primitive.PrimitiveAddDtype(builder, dt)
+                uproot_skyhook.interpretation_generated.Primitive.PrimitiveAddBigendian(builder, big)
+                fromtypes.append(uproot_skyhook.interpretation_generated.Primitive.PrimitiveEnd(builder))
 
             totypes = []
             for name in interp.todtype.names:
@@ -249,41 +249,41 @@ def interp_toflatbuffers(builder, interp):
                 big = (interp.todtype[name].byteorder == ">") or (interp.todtype[name].byteorder == "=" and sys.byteorder == "big")
                 if interp.todtype[name].subdtype is not None:
                     raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
-                uproot_skyhook.interpretation.Primitive.PrimitiveStart(builder)
-                uproot_skyhook.interpretation.Primitive.PrimitiveAddDtype(builder, dt)
-                uproot_skyhook.interpretation.Primitive.PrimitiveAddBigendian(builder, big)
-                totypes.append(uproot_skyhook.interpretation.Primitive.PrimitiveEnd(builder))
+                uproot_skyhook.interpretation_generated.Primitive.PrimitiveStart(builder)
+                uproot_skyhook.interpretation_generated.Primitive.PrimitiveAddDtype(builder, dt)
+                uproot_skyhook.interpretation_generated.Primitive.PrimitiveAddBigendian(builder, big)
+                totypes.append(uproot_skyhook.interpretation_generated.Primitive.PrimitiveEnd(builder))
 
             fromnames = [builder.CreateString(x.encode("utf-8")) for x in interp.fromdtype.names]
             tonames = [builder.CreateString(x.encode("utf-8")) for x in interp.todtype.names]
 
-            uproot_skyhook.interpretation.Record.RecordStartFromtypesVector(builder, len(fromtypes))
+            uproot_skyhook.interpretation_generated.Record.RecordStartFromtypesVector(builder, len(fromtypes))
             for x in fromtypes[::-1]:
                 builder.PrependUOffsetTRelative(x)
             fromtypes = builder.EndVector(len(fromtypes))
 
-            uproot_skyhook.interpretation.Record.RecordStartTotypesVector(builder, len(totypes))
+            uproot_skyhook.interpretation_generated.Record.RecordStartTotypesVector(builder, len(totypes))
             for x in totypes[::-1]:
                 builder.PrependUOffsetTRelative(x)
             totypes = builder.EndVector(len(totypes))
 
-            uproot_skyhook.interpretation.Record.RecordStartFromnamesVector(builder, len(fromnames))
+            uproot_skyhook.interpretation_generated.Record.RecordStartFromnamesVector(builder, len(fromnames))
             for x in fromnames[::-1]:
                 builder.PrependUOffsetTRelative(x)
             fromnames = builder.EndVector(len(fromnames))
 
-            uproot_skyhook.interpretation.Record.RecordStartTonamesVector(builder, len(tonames))
+            uproot_skyhook.interpretation_generated.Record.RecordStartTonamesVector(builder, len(tonames))
             for x in tonames[::-1]:
                 builder.PrependUOffsetTRelative(x)
             tonames = builder.EndVector(len(tonames))
 
-            uproot_skyhook.interpretation.Record.RecordStart(builder)
-            uproot_skyhook.interpretation.Record.RecordAddFromtypes(builder, fromtypes)
-            uproot_skyhook.interpretation.Record.RecordAddTotypes(builder, totypes)
-            uproot_skyhook.interpretation.Record.RecordAddFromnames(builder, fromnames)
-            uproot_skyhook.interpretation.Record.RecordAddTonames(builder, tonames)
-            data = uproot_skyhook.interpretation.Record.RecordEnd(builder)
-            datatype = uproot_skyhook.interpretation.InterpretationData.InterpretationData.Record
+            uproot_skyhook.interpretation_generated.Record.RecordStart(builder)
+            uproot_skyhook.interpretation_generated.Record.RecordAddFromtypes(builder, fromtypes)
+            uproot_skyhook.interpretation_generated.Record.RecordAddTotypes(builder, totypes)
+            uproot_skyhook.interpretation_generated.Record.RecordAddFromnames(builder, fromnames)
+            uproot_skyhook.interpretation_generated.Record.RecordAddTonames(builder, tonames)
+            data = uproot_skyhook.interpretation_generated.Record.RecordEnd(builder)
+            datatype = uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.Record
 
         else:
             raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
@@ -293,66 +293,66 @@ def interp_toflatbuffers(builder, interp):
         todims = None if interp.todims is None or len(interp.todims) is None else interp.todims
 
         if fromdims is not None:
-            uproot_skyhook.interpretation.Double32.Double32StartFromdimsVector(builder, len(fromdims))
+            uproot_skyhook.interpretation_generated.Double32.Double32StartFromdimsVector(builder, len(fromdims))
             for x in fromdims[::-1]:
                 builder.PrependUint32(x)
             fromdims = builder.EndVector(len(fromdims))
 
         if todims is not None:
-            uproot_skyhook.interpretation.Double32.Double32StartTodimsVector(builder, len(todims))
+            uproot_skyhook.interpretation_generated.Double32.Double32StartTodimsVector(builder, len(todims))
             for x in todims[::-1]:
                 builder.PrependUint32(x)
             todims = builder.EndVector(len(todims))
 
-        uproot_skyhook.interpretation.Double32.Double32Start(builder)
-        uproot_skyhook.interpretation.Double32.Double32AddLow(builder, interp.low)
-        uproot_skyhook.interpretation.Double32.Double32AddHigh(builder, interp.high)
-        uproot_skyhook.interpretation.Double32.Double32AddNumbits(builder, interp.numbits)
+        uproot_skyhook.interpretation_generated.Double32.Double32Start(builder)
+        uproot_skyhook.interpretation_generated.Double32.Double32AddLow(builder, interp.low)
+        uproot_skyhook.interpretation_generated.Double32.Double32AddHigh(builder, interp.high)
+        uproot_skyhook.interpretation_generated.Double32.Double32AddNumbits(builder, interp.numbits)
         if fromdims is not None:
-            uproot_skyhook.interpretation.Double32.Double32AddFromdims(builder, fromdims)
+            uproot_skyhook.interpretation_generated.Double32.Double32AddFromdims(builder, fromdims)
         if todims is not None:
-            uproot_skyhook.interpretation.Double32.Double32AddTodims(builder, todims)
-        data = uproot_skyhook.interpretation.Double32.Double32End(builder)
-        datatype = uproot_skyhook.interpretation.InterpretationData.InterpretationData.Double32
+            uproot_skyhook.interpretation_generated.Double32.Double32AddTodims(builder, todims)
+        data = uproot_skyhook.interpretation_generated.Double32.Double32End(builder)
+        datatype = uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.Double32
 
     elif isinstance(interp, uproot.asstlbitset):
-        uproot_skyhook.interpretation.STLBitSet.STLBitSetStart(builder)
-        uproot_skyhook.interpretation.STLBitSet.STLBitSetAddNumbytes(builder, interp.numbytes)
-        data = uproot_skyhook.interpretation.STLBitSet.STLBitSetEnd(builder)
-        datatype = uproot_skyhook.interpretation.InterpretationData.InterpretationData.STLBitSet
+        uproot_skyhook.interpretation_generated.STLBitSet.STLBitSetStart(builder)
+        uproot_skyhook.interpretation_generated.STLBitSet.STLBitSetAddNumbytes(builder, interp.numbytes)
+        data = uproot_skyhook.interpretation_generated.STLBitSet.STLBitSetEnd(builder)
+        datatype = uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.STLBitSet
 
     elif isinstance(interp, uproot.asjagged):
         content = interp_toflatbuffers(builder, interp.content)
-        uproot_skyhook.interpretation.Jagged.JaggedStart(builder)
-        uproot_skyhook.interpretation.Jagged.JaggedAddContent(builder, content)
-        uproot_skyhook.interpretation.Jagged.JaggedAddSkipbytes(builder, interp.skipbytes)
-        data = uproot_skyhook.interpretation.Jagged.JaggedEnd(builder)
-        datatype = uproot_skyhook.interpretation.InterpretationData.InterpretationData.Jagged
+        uproot_skyhook.interpretation_generated.Jagged.JaggedStart(builder)
+        uproot_skyhook.interpretation_generated.Jagged.JaggedAddContent(builder, content)
+        uproot_skyhook.interpretation_generated.Jagged.JaggedAddSkipbytes(builder, interp.skipbytes)
+        data = uproot_skyhook.interpretation_generated.Jagged.JaggedEnd(builder)
+        datatype = uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.Jagged
 
     elif isinstance(interp, uproot.asstring):
-        uproot_skyhook.interpretation.String.StringStart(builder)
-        uproot_skyhook.interpretation.String.StringAddSkipbytes(builder, interp.content.skipbytes)
-        data = uproot_skyhook.interpretation.String.StringEnd(builder)
-        datatype = uproot_skyhook.interpretation.InterpretationData.InterpretationData.String
+        uproot_skyhook.interpretation_generated.String.StringStart(builder)
+        uproot_skyhook.interpretation_generated.String.StringAddSkipbytes(builder, interp.content.skipbytes)
+        data = uproot_skyhook.interpretation_generated.String.StringEnd(builder)
+        datatype = uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.String
 
     elif isinstance(interp, uproot.asobj) and isinstance(interp.content, uproot.astable):
         content = interp_toflatbuffers(builder, interp.content.content)
         qualname = [builder.CreateString(x.encode("utf-8")) for x in (interp.cls.__module__, interp.cls.__name__)]
-        uproot_skyhook.interpretation.TableObj.TableObjStartQualnameVector(builder, len(qualname))
+        uproot_skyhook.interpretation_generated.TableObj.TableObjStartQualnameVector(builder, len(qualname))
         for x in qualname[::-1]:
             builder.PrependUOffsetTRelative(x)
         qualname = builder.EndVector(len(qualname))
 
-        uproot_skyhook.interpretation.TableObj.TableObjStart(builder)
-        uproot_skyhook.interpretation.TableObj.TableObjAddContent(builder, content)
-        uproot_skyhook.interpretation.TableObj.TableObjAddQualname(builder, qualname)
-        data = uproot_skyhook.interpretation.TableObj.TableObjEnd(builder)
-        datatype = uproot_skyhook.interpretation.InterpretationData.InterpretationData.TableObj
+        uproot_skyhook.interpretation_generated.TableObj.TableObjStart(builder)
+        uproot_skyhook.interpretation_generated.TableObj.TableObjAddContent(builder, content)
+        uproot_skyhook.interpretation_generated.TableObj.TableObjAddQualname(builder, qualname)
+        data = uproot_skyhook.interpretation_generated.TableObj.TableObjEnd(builder)
+        datatype = uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.TableObj
 
     else:
         raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
 
-    uproot_skyhook.interpretation.Interpretation.InterpretationStart(builder)
-    uproot_skyhook.interpretation.Interpretation.InterpretationAddDataType(builder, datatype)
-    uproot_skyhook.interpretation.Interpretation.InterpretationAddData(builder, data)
-    return uproot_skyhook.interpretation.Interpretation.InterpretationEnd(builder)
+    uproot_skyhook.interpretation_generated.Interpretation.InterpretationStart(builder)
+    uproot_skyhook.interpretation_generated.Interpretation.InterpretationAddDataType(builder, datatype)
+    uproot_skyhook.interpretation_generated.Interpretation.InterpretationAddData(builder, data)
+    return uproot_skyhook.interpretation_generated.Interpretation.InterpretationEnd(builder)

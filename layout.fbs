@@ -28,9 +28,9 @@
 
 include "interpretation.fbs";
 
-namespace uproot_skyhook.layout;
+namespace uproot_skyhook.layout_generated;
 
-enum CompressionAlgo: byte {
+enum Compression: byte {
   none = 0,
   zlib = 1,
   lzma = 2,
@@ -38,35 +38,34 @@ enum CompressionAlgo: byte {
   lz4 = 4
 }
 
-table Basket {
-  seekkey: ulong;
-  algos: [CompressionAlgo] (required);
-  seekdata: [ulong] (required);
-  compressedbytes: [int] (required);
-  uncompressedbytes: [int] (required);
-  border: ulong;
+struct Page {
+  file_seek: ulong;
+  compressedbytes: int;
+  uncompressedbytes: int;
 }
 
-table ColumnInFile {
-  entries: [ulong] (required);
+table Basket {
+  compression: Compression;
+  pages: [Page];
+  data_border: ulong;
+}
+
+table Branch {
+  local_offsets: [ulong] (required);
   baskets: [Basket] (required);
 }
 
 table Column {
   name: string (required);
-  interp: uproot_skyhook.interpretation.Interpretation (required);
+  interp: uproot_skyhook.interpretation_generated.Interpretation (required);
   title: string;
   aliases: [string];
-  metadata: string;
 }
 
 table File {
   location: string (required);
   uuid: string (required);
-  columns: [ColumnInFile] (required);  // one for each column
-  numentries: ulong;
-  objname: string;                     // if present, overrides Dataset.objname
-  metadata: string;
+  branches: [Branch] (required);    // one for each column
 }
 
 table Dataset {
@@ -74,9 +73,8 @@ table Dataset {
   objname: string (required);
   columns: [Column] (required);
   files: [File] (required);
+  global_offsets: [ulong] (required);
   location_prefix: string;
-  numentries: ulong;
-  metadata: string;
 }
 
 file_extension "rootlayout";
