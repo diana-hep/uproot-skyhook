@@ -172,10 +172,35 @@ def toflatbuffers(builder, interp):
             raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
 
     elif isinstance(interp, uproot.asdouble32):
-        raise NotImplementedError
+        fromdims = None if len(interp.fromdims) is None else interp.fromdims
+        todims = None if len(interp.todims) is None else interp.todims
+
+        if fromdims is not None:
+            uproot_skyhook.interpretation.Double32.Double32StartFromdimsVector(builder, len(fromdims))
+            for x in fromdims[::-1]:
+                builder.PrependUInt(x)
+            fromdims = builder.EndVector(len(fromdims))
+
+        if todims is not None:
+            uproot_skyhook.interpretation.Double32.Double32StartTodimsVector(builder, len(todims))
+            for x in todims[::-1]:
+                builder.PrependUInt(x)
+            todims = builder.EndVector(len(todims))
+
+        uproot_skyhook.interpretation.Double32.Double32Start(builder)
+        uproot_skyhook.interpretation.Double32.Double32AddLow(interp.low)
+        uproot_skyhook.interpretation.Double32.Double32AddHigh(interp.high)
+        uproot_skyhook.interpretation.Double32.Double32AddNumbits(interp.numbits)
+        if fromdims is not None:
+            uproot_skyhook.interpretation.Double32.Double32AddFromdims(fromdims)
+        if todims is not None:
+            uproot_skyhook.interpretation.Double32.Double32AddTodims(todims)
+        return uproot_skyhook.interpretation.Double32.Double32End(builder)
 
     elif isinstance(interp, uproot.asstlbitset):
-        raise NotImplementedError
+        uproot_skyhook.interpretation.STLBitSet.STLBitSetStart(builder)
+        uproot_skyhook.interpretation.STLBitSet.STLBitSetAddNumbytes(interp.numbytes)
+        return uproot_skyhook.interpretation.STLBitSet.STLBitSetEnd(builder)
 
     elif isinstance(interp, uproot.asjagged):
         raise NotImplementedError

@@ -65,6 +65,7 @@ table Double32 {
   low: double;
   high: double;
   numbits: int;
+  fromdims: [uint];
   todims: [uint];
 }
 
