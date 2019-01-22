@@ -30,24 +30,34 @@ namespace uproot_skyhook.interpretation;
 
 enum DType: byte {
   dtype_unspecified = 0,
-  dtype_int8 = 1,
-  dtype_uint8 = 2,
-  dtype_int16 = 3,
-  dtype_uint16 = 4,
-  dtype_int32 = 5,
-  dtype_uint32 = 6,
-  dtype_int64 = 7,
-  dtype_uint64 = 8,
-  dtype_float32 = 9,
-  dtype_float64 = 10
+  dtype_bool = 1,
+  dtype_int8 = 2,
+  dtype_uint8 = 3,
+  dtype_int16 = 4,
+  dtype_uint16 = 5,
+  dtype_int32 = 6,
+  dtype_uint32 = 7,
+  dtype_int64 = 8,
+  dtype_uint64 = 9,
+  dtype_float32 = 10,
+  dtype_float64 = 11
 }
 
-table Array {
+table Flat {
   fromdtype: DType;
   todtype: DType = dtype_unspecified;
+  frombigendian: bool = true;
   tobigendian: bool = false;
   fromdims: [uint];
   todims: [uint];
+}
+
+table Record {
+  fromnames: [string];
+  fromtypes: [DType];
+  tonames: [string];
+  totypes: [DType];
+  tobigendian: bool = false;
 }
 
 table Double32 {
@@ -62,7 +72,8 @@ table STLBitSet {
 }
 
 union FlatInterpretation {
-  Array,
+  Flat,
+  Record,
   Double32,
   STLBitSet
 }
@@ -82,7 +93,8 @@ table FlatObj {
 }
 
 union Interpretation {
-  Array,
+  Flat,
+  Record,
   Double32,
   STLBitSet,
   Jagged,
