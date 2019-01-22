@@ -34,7 +34,7 @@ import numpy
 import flatbuffers
 
 import uproot
-import uproot_skyhook.interpretation
+import uproot_skyhook.serialization
 
 class Test(unittest.TestCase):
     def runTest(self):
@@ -42,7 +42,7 @@ class Test(unittest.TestCase):
 
     def roundtrip_interp(self, interp):
         builder = flatbuffers.Builder(1024)
-        builder.Finish(uproot_skyhook.interpretation.toflatbuffers(builder, interp))
+        builder.Finish(uproot_skyhook.serialization.interp_toflatbuffers(builder, interp))
         print(builder.Output())
 
     def test_serialization_asdtype(self):
