@@ -35,6 +35,7 @@ import uproot
 import uproot_skyhook.interpretation.DType
 import uproot_skyhook.interpretation.Primitive
 import uproot_skyhook.interpretation.Flat
+import uproot_skyhook.interpretation.Record
 import uproot_skyhook.interpretation.Double32
 import uproot_skyhook.interpretation.STLBitSet
 import uproot_skyhook.interpretation.Jagged
@@ -57,7 +58,7 @@ def dtype2fb(dtype):
         elif dtype.itemsize == 8:
             return uproot_skyhook.interpretation.DType.DType.dtype_int64
         else:
-            raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
+            raise NotImplementedError("SkyHook layout of {0} not implemented".format(repr(dtype)))
 
     elif dtype.kind == "u":
         if dtype.itemsize == 1:
@@ -69,7 +70,7 @@ def dtype2fb(dtype):
         elif dtype.itemsize == 8:
             return uproot_skyhook.interpretation.DType.DType.dtype_uint64
         else:
-            raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
+            raise NotImplementedError("SkyHook layout of {0} not implemented".format(repr(dtype)))
 
     elif dtype.kind == "f":
         if dtype.itemsize == 4:
@@ -77,10 +78,10 @@ def dtype2fb(dtype):
         elif dtype.itemsize == 8:
             return uproot_skyhook.interpretation.DType.DType.dtype_float64
         else:
-            raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
+            raise NotImplementedError("SkyHook layout of {0} not implemented".format(repr(dtype)))
 
     else:
-        raise NotImplementedError("SkyHook layout of Interpretation {0} not implemented".format(repr(interp)))
+        raise NotImplementedError("SkyHook layout of {0} not implemented".format(repr(dtype)))
 
 fb2dtype = {
     uproot_skyhook.interpretation.DType.DType.dtype_bool: numpy.dtype(numpy.bool_),
@@ -151,18 +152,25 @@ def interp_fromflatbuffers(fb):
 def interp_toflatbuffers(builder, interp):
     if isinstance(interp, uproot.asdtype):
         if interp.fromdtype.names is None and interp.todtype.names is None:
-            fromdtype = dtype2fb(interp.fromdtype)
-            todtype = dtype2fb(interp.todtype)
+            if interp.fromdtype.subdtype is None:
+                fromdt, fromdims = interp.fromdtype, None
+            else:
+                fromdt, fromdims = interp.fromdtype.subdtype
 
-            frombigendian = (interp.fromdtype.byteorder == ">") or (interp.fromdtype.byteorder == "=" and sys.byteorder == "big")
-            tobigendian = (interp.todtype.byteorder == ">") or (interp.todtype.byteorder == "=" and sys.byteorder == "big")
-            fromdims = None if interp.fromdtype.subdtype is None else interp.fromdtype.subdtype[1]
-            todims = None if interp.todtype.subdtype is None else interp.todtype.subdtype[1]
+            if interp.todtype.subdtype is None:
+                todt, todims = interp.todtype, None
+            else:
+                todt, todims = interp.todtype.subdtype
+
+            fromdtype = dtype2fb(fromdt)
+            todtype = dtype2fb(todt)
+            frombigendian = (fromdt.byteorder == ">") or (fromdt.byteorder == "=" and sys.byteorder == "big")
+            tobigendian = (todt.byteorder == ">") or (todt.byteorder == "=" and sys.byteorder == "big")
 
             if fromdims is not None:
                 uproot_skyhook.interpretation.Primitive.PrimitiveStartDimsVector(builder, len(fromdims))
                 for x in fromdims[::-1]:
-                    builder.PrependUInt(x)
+                    builder.PrependUint32(x)
                 fromdims = builder.EndVector(len(fromdims))
 
             uproot_skyhook.interpretation.Primitive.PrimitiveStart(builder)
@@ -175,7 +183,7 @@ def interp_toflatbuffers(builder, interp):
             if todims is not None:
                 uproot_skyhook.interpretation.Primitive.PrimitiveStartDimsVector(builder, len(todims))
                 for x in todims[::-1]:
-                    builder.PrependUInt(x)
+                    builder.PrependUint32(x)
                 todims = builder.EndVector(len(todims))
 
             uproot_skyhook.interpretation.Primitive.PrimitiveStart(builder)
@@ -255,13 +263,13 @@ def interp_toflatbuffers(builder, interp):
         if fromdims is not None:
             uproot_skyhook.interpretation.Double32.Double32StartFromdimsVector(builder, len(fromdims))
             for x in fromdims[::-1]:
-                builder.PrependUInt(x)
+                builder.PrependUint32(x)
             fromdims = builder.EndVector(len(fromdims))
 
         if todims is not None:
             uproot_skyhook.interpretation.Double32.Double32StartTodimsVector(builder, len(todims))
             for x in todims[::-1]:
-                builder.PrependUInt(x)
+                builder.PrependUint32(x)
             todims = builder.EndVector(len(todims))
 
         uproot_skyhook.interpretation.Double32.Double32Start(builder)
