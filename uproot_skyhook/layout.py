@@ -39,4 +39,37 @@ import uproot_skyhook.layout_generated.Column
 import uproot_skyhook.layout_generated.File
 import uproot_skyhook.layout_generated.Dataset
 
+class Compression(object):
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return type(self).__module__ + "." + self.name
+
+    def __str__(self):
+        return self.name
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self is other or (isinstance(other, type(self)) and self.value == other.value)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+none = Compression("none", uproot_skyhook.layout_generated.Compression.Compression.none)
+zlib = Compression("zlib", uproot_skyhook.layout_generated.Compression.Compression.zlib)
+lzma = Compression("lzma", uproot_skyhook.layout_generated.Compression.Compression.lzma)
+old  = Compression("old",  uproot_skyhook.layout_generated.Compression.Compression.old)
+lz4  = Compression("lz4",  uproot_skyhook.layout_generated.Compression.Compression.lz4)
+
+class Layout(object): pass
+
+class Page(Layout):
+    def __init__(self, file_seek, compressedbytes, uncompressedbytes):
+        self.file_seek = file_seek
+        self.compressedbytes = compressedbytes
+        self.uncompressedbytes = uncompressedbytes
 
