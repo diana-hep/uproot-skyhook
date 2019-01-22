@@ -126,25 +126,44 @@ def interp_fromflatbuffers(fb):
         fb2 = uproot_skyhook.interpretation.Record.Record()
         fb2.Init(data.Bytes, data.Pos)
 
+        fromtypes = []
+        for i in range(fb2.FromtypesLength()):
+            t = fb2.Fromtypes(i)
+            dt = fb2dtype[t.Dtype()].newbyteorder(">" if t.Bigendian() else "<")
+            fromtypes.append((fb2.Fromnames(i).decode("utf-8"), dt))
+
+        totypes = []
+        for i in range(fb2.TotypesLength()):
+            t = fb2.Totypes(i)
+            dt = fb2dtype[t.Dtype()].newbyteorder(">" if t.Bigendian() else "<")
+            totypes.append((fb2.Tonames(i).decode("utf-8"), dt))
+
+        return uproot.asdtype(numpy.dtype(fromtypes), numpy.dtype(totypes))
+
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.Double32:
         fb2 = uproot_skyhook.interpretation.Double32.Double32()
         fb2.Init(data.Bytes, data.Pos)
+        raise Exception
 
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.STLBitSet:
         fb2 = uproot_skyhook.interpretation.STLBitSet.STLBitSet()
         fb2.Init(data.Bytes, data.Pos)
+        raise Exception
 
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.Jagged:
         fb2 = uproot_skyhook.interpretation.Jagged.Jagged()
         fb2.Init(data.Bytes, data.Pos)
+        raise Exception
 
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.String:
         fb2 = uproot_skyhook.interpretation.String.String()
         fb2.Init(data.Bytes, data.Pos)
+        raise Exception
 
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.TableObj:
         fb2 = uproot_skyhook.interpretation.TableObj.TableObj()
         fb2.Init(data.Bytes, data.Pos)
+        raise Exception
 
     else:
         raise AssertionError(datatype)
