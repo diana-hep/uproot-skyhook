@@ -26,6 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import importlib
 import sys
 
 import numpy
@@ -153,22 +154,29 @@ def interp_fromflatbuffers(fb):
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.STLBitSet:
         fb2 = uproot_skyhook.interpretation.STLBitSet.STLBitSet()
         fb2.Init(data.Bytes, data.Pos)
-        raise Exception
+        return uproot.asstlbitset(fb2.Numbytes())
 
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.Jagged:
         fb2 = uproot_skyhook.interpretation.Jagged.Jagged()
         fb2.Init(data.Bytes, data.Pos)
-        raise Exception
+        return uproot.asjagged(interp_fromflatbuffers(fb2.Content()), fb2.Skipbytes())
 
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.String:
         fb2 = uproot_skyhook.interpretation.String.String()
         fb2.Init(data.Bytes, data.Pos)
-        raise Exception
+        return uproot.asstring(fb2.Skipbytes())
 
     elif datatype == uproot_skyhook.interpretation.InterpretationData.InterpretationData.TableObj:
         fb2 = uproot_skyhook.interpretation.TableObj.TableObj()
         fb2.Init(data.Bytes, data.Pos)
-        raise Exception
+
+        content = interp_fromflatbuffers(fb2.Content())
+        qualname = [fb2.Qualname(i).decode("utf-8") for i in range(fb2.QualnameLength())]
+        gen, genname = importlib.import_module(qualname[0]), qualname[1:]
+        while len(genname) > 0:
+            gen, genname = getattr(gen, genname[0]), genname[1:]
+
+        return uproot.asobj(uproot.astable(content), gen)
 
     else:
         raise AssertionError(datatype)
@@ -323,7 +331,7 @@ def interp_toflatbuffers(builder, interp):
 
     elif isinstance(interp, uproot.asstring):
         uproot_skyhook.interpretation.String.StringStart(builder)
-        uproot_skyhook.interpretation.String.StringAddSkipbytes(builder, interp.skipbytes)
+        uproot_skyhook.interpretation.String.StringAddSkipbytes(builder, interp.content.skipbytes)
         data = uproot_skyhook.interpretation.String.StringEnd(builder)
         datatype = uproot_skyhook.interpretation.InterpretationData.InterpretationData.String
 

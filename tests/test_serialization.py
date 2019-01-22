@@ -34,6 +34,7 @@ import numpy
 import flatbuffers
 
 import uproot
+import uproot_methods
 import uproot_skyhook.serialization
 
 class Test(unittest.TestCase):
@@ -107,8 +108,65 @@ class Test(unittest.TestCase):
         self.roundtrip_interp(uproot.asdtype(("<f8", 10)))
         self.roundtrip_interp(uproot.asdtype((">f8", 10)))
 
+        self.roundtrip_interp(uproot.asdtype((numpy.bool_, (10, 20))))
+        self.roundtrip_interp(uproot.asdtype(("i1", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype(("<i2", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype((">i2", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype(("<i4", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype((">i4", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype(("<i8", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype((">i8", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype(("u1", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype(("<u2", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype((">u2", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype(("<u4", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype((">u4", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype(("<u8", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype((">u8", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype(("<f4", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype((">f4", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype(("<f8", (10, 20))))
+        self.roundtrip_interp(uproot.asdtype((">f8", (10, 20))))
+
+        self.roundtrip_interp(uproot.asdtype((numpy.bool_, (10, 20)), (numpy.bool_, (20, 10))))
+        self.roundtrip_interp(uproot.asdtype(("i1", (10, 20)), ("i1", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype(("<i2", (10, 20)), ("<i2", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype((">i2", (10, 20)), (">i2", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype(("<i4", (10, 20)), ("<i4", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype((">i4", (10, 20)), (">i4", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype(("<i8", (10, 20)), ("<i8", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype((">i8", (10, 20)), (">i8", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype(("u1", (10, 20)), ("u1", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype(("<u2", (10, 20)), ("<u2", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype((">u2", (10, 20)), (">u2", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype(("<u4", (10, 20)), ("<u4", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype((">u4", (10, 20)), (">u4", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype(("<u8", (10, 20)), ("<u8", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype((">u8", (10, 20)), (">u8", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype(("<f4", (10, 20)), ("<f4", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype((">f4", (10, 20)), (">f4", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype(("<f8", (10, 20)), ("<f8", (20, 10))))
+        self.roundtrip_interp(uproot.asdtype((">f8", (10, 20)), (">f8", (20, 10))))
+
     def test_serialization_asdtype_record(self):
         self.roundtrip_interp(uproot.asdtype([("one", int), ("two", float), ("three", bool)]))
 
     def test_serialization_asdouble32(self):
         self.roundtrip_interp(uproot.asdouble32(3.14, 99.9, 10))
+        self.roundtrip_interp(uproot.asdouble32(3.14, 99.9, 10, (10, 20)))
+        self.roundtrip_interp(uproot.asdouble32(3.14, 99.9, 10, (10, 20), (20, 10)))
+
+    def test_serialization_asstlbitset(self):
+        self.roundtrip_interp(uproot.asstlbitset(26))
+
+    def test_serialization_asjagged(self):
+        self.roundtrip_interp(uproot.asjagged(uproot.asdtype("f4")))
+        self.roundtrip_interp(uproot.asjagged(uproot.asdtype("f4"), skipbytes=10))
+
+    def test_serialization_asstring(self):
+        self.roundtrip_interp(uproot.asstring())
+        self.roundtrip_interp(uproot.asstring(skipbytes=10))
+
+    def test_serialization_asobj(self):
+        self.roundtrip_interp(uproot.asobj(uproot.astable(uproot.asdtype([("fX", ">f8"), ("fY", ">f8"), ("fZ", ">f8"), ("fE", ">f8")])), uproot_methods.classes.TLorentzVector.Methods))
+        self.roundtrip_interp(uproot.asjagged(uproot.asobj(uproot.astable(uproot.asdtype([("fX", ">f8"), ("fY", ">f8"), ("fZ", ">f8"), ("fE", ">f8")])), uproot_methods.classes.TLorentzVector.Methods), 10))
