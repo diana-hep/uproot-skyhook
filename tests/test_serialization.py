@@ -43,7 +43,8 @@ class Test(unittest.TestCase):
     def roundtrip_interp(self, interp):
         builder = flatbuffers.Builder(1024)
         builder.Finish(uproot_skyhook.serialization.interp_toflatbuffers(builder, interp))
-        print(builder.Output())
+        serialized = builder.Output()
+        assert uproot_skyhook.serialization.interp_frombuffer(serialized).identifier == interp.identifier
 
     def test_serialization_asdtype(self):
         self.roundtrip_interp(uproot.asdtype(numpy.float32))

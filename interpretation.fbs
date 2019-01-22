@@ -29,7 +29,7 @@
 namespace uproot_skyhook.interpretation;
 
 enum DType: byte {
-  dtype_unspecified = 0,
+  dtype_none = 0,
   dtype_bool = 1,
   dtype_int8 = 2,
   dtype_uint8 = 3,
@@ -73,15 +73,8 @@ table STLBitSet {
   numbytes: int;
 }
 
-union FlatInterpretation {
-  Flat,
-  Record,
-  Double32,
-  STLBitSet
-}
-
 table Jagged {
-  content: FlatInterpretation;
+  content: Interpretation (required);
   skipbytes: int;
 }
 
@@ -90,11 +83,11 @@ table String {
 }
 
 table TableObj {
-  content: FlatInterpretation (required);
+  content: Interpretation (required);
   qualname: [string];
 }
 
-union Interpretation {
+union InterpretationData {
   Flat,
   Record,
   Double32,
@@ -102,4 +95,8 @@ union Interpretation {
   Jagged,
   String,
   TableObj
+}
+
+table Interpretation {
+  data: InterpretationData (required);
 }
