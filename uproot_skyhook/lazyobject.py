@@ -59,7 +59,7 @@ class LazyList(Sequence):
         elif len(tmp) < 100:
             return "[" + ",\n ".join(tmp) + "]"
         else:
-            return "[" + ",\n ".join(tmp[:50]) + ",\n ..." + ",\n ".join(tmp[:50]) + "]"
+            return "[" + ",\n ".join(tmp[:50]) + ",\n ...\n" + ",\n ".join(tmp[:50]) + "]"
 
     def __eq__(self, other):
         if not isinstance(other, (LazyList, Iterable)):

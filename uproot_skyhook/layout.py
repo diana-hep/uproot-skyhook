@@ -171,6 +171,9 @@ class Branch(Layout):
         return self is other or (isinstance(other, Branch) and numpy.array_equal(self.local_offsets, other.local_offsets) and self.baskets == other.baskets)
 
     def _toflatbuffers(self, builder):
+        builder.branchnum += 1
+        print(branchnum, branchname.decode("utf-8"))
+
         baskets = [x._toflatbuffers(builder) for x in self.baskets]
         uproot_skyhook.layout_generated.Branch.BranchStartBasketsVector(builder, len(baskets))
         for x in baskets[::-1]:
@@ -298,6 +301,8 @@ class Dataset(Layout):
         return self is other or (isinstance(other, Dataset) and self.name == other.name and self.treepath == other.treepath and self.colnames == other.colnames and self.columns == other.columns and self.files == other.files and numpy.array_equal(self.global_offsets, other.global_offsets) and self.location_prefix == other.location_prefix)
 
     def _toflatbuffers(self, builder):
+        builder.branchnum = 0
+
         files = [x._toflatbuffers(builder) for x in self.files]
         uproot_skyhook.layout_generated.Dataset.DatasetStartFilesVector(builder, len(files))
         for x in files[::-1]:
@@ -323,7 +328,8 @@ class Dataset(Layout):
 
         name = builder.CreateString(self.name.encode("utf-8"))
         treepath = builder.CreateString(self.treepath.encode("utf-8"))
-        location_prefix = builder.CreateString(self.location_prefix.encode("utf-8"))
+        if self.location_prefix is not None:
+            location_prefix = builder.CreateString(self.location_prefix.encode("utf-8"))
 
         uproot_skyhook.layout_generated.Dataset.DatasetStart(builder)
         uproot_skyhook.layout_generated.Dataset.DatasetAddName(builder, name)
@@ -332,19 +338,40 @@ class Dataset(Layout):
         uproot_skyhook.layout_generated.Dataset.DatasetAddColumns(builder, columns)
         uproot_skyhook.layout_generated.Dataset.DatasetAddFiles(builder, files)
         uproot_skyhook.layout_generated.Dataset.DatasetAddGlobalOffsets(builder, global_offsets)
-        uproot_skyhook.layout_generated.Dataset.DatasetAddLocationPrefix(builder, location_prefix)
+        if self.location_prefix is not None:
+            uproot_skyhook.layout_generated.Dataset.DatasetAddLocationPrefix(builder, location_prefix)
         return uproot_skyhook.layout_generated.Dataset.DatasetEnd(builder)
+
+    def tobuffer(self):
+        builder = flatbuffers.Builder(1024)
+        builder.Finish(toflatbuffers(builder, self))
+        return builder.Output()
+
+    def tonumpy(self):
+        return numpy.frombuffer(self.tobuffer(), dtype=numpy.uint8)
+
+    def tofile(self, filename):
+        with open(filename, "wb") as file:
+            file.write(b"roly")
+            file.write(self.tobuffer())
 
 def frombuffer(buffer, offset=0):
     return fromflatbuffers(uproot_skyhook.layout_generated.Dataset.Dataset.GetRootAsDataset(buffer, offset))
 
+def fromnumpy(array):
+    return frombuffer(array)
+
+def fromfile(filename):
+    file = numpy.memmap(filename, dtype=numpy.uint8, mode="r")
+    if file[:4].tostring() != b"roly":
+        raise OSError("file does not begin with magic 'roly'")
+    return fromnumpy(file[4:])
+    
 def fromflatbuffers(fb):
     return Dataset.fromflatbuffers(fb)
 
 def tobuffer(dataset):
-    builder = flatbuffers.Builder(1024)
-    builder.Finish(toflatbuffers(builder, dataset))
-    return builder.Output()
+    return dataset.tobuffer()
 
 def toflatbuffers(builder, dataset):
     return dataset._toflatbuffers(builder)

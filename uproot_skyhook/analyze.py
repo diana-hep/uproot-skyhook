@@ -36,13 +36,19 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
     fullfilepath = filepath if location_prefix is None else location_prefix + filepath
     uprootfile = uproot.open(fullfilepath, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
 
+    numbranches = len(uprootfile[treepath].keys(recursive=True))
+    branchnum = 0
+
     numentries = 0
     colnames = []
     columns = []
     branches = []
     for branchname, uprootbranch in uprootfile[treepath].iteritems(recursive=True):
-        if branchname != b"Muon_pt":
-            continue
+        branchnum += 1
+        print(branchnum, numbranches, branchnum/numbranches, branchname.decode("utf-8"))
+
+        # if branchname != b"Muon_pt":
+        #     continue
 
         if uprootbranch.numbaskets != uprootbranch._numgoodbaskets:
             raise NotImplementedError("branch recovery not handled by uproot-skyhook")
@@ -84,7 +90,7 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
             baskets.append(uproot_skyhook.layout.Basket(compression, pages, data_border))
 
         colnames.append(branchname.decode("utf-8"))
-        columns.append(uproot_skyhook.layout.Column(uprootbranch.interpretation, uprootbranch.title))
+        columns.append(uproot_skyhook.layout.Column(uprootbranch.interpretation, None if uprootbranch.title is None else uprootbranch.title.decode("utf-8")))
         branches.append(uproot_skyhook.layout.Branch(uprootbranch._fBasketEntry[: uprootbranch.numbaskets + 1], baskets))
         numentries = max(numentries, branches[-1].local_offsets[-1])
         
