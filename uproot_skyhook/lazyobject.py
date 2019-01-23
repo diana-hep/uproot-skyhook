@@ -62,7 +62,7 @@ class LazyList(Sequence):
             return "[" + ",\n ".join(tmp[:50]) + ",\n ..." + ",\n ".join(tmp[:50]) + "]"
 
     def __eq__(self, other):
-        if not isinstance(other, (Vector, Iterable)):
+        if not isinstance(other, (LazyList, Iterable)):
             return False
         if len(self) != len(other):
             return False
@@ -81,9 +81,9 @@ def lazyproperty(name, finalize):
 
     @property
     def prop(self):
-        out = getattr(self, "_" + name, None)
-        if out is not None:
-            return out
+        uname = "_" + name
+        if hasattr(self, uname):
+            return getattr(self, uname)
 
         fbname = name2fb(name)
         fblenname = fbname + "Length"
@@ -95,8 +95,8 @@ def lazyproperty(name, finalize):
         elif finalize is None:
             out = LazyList(getattr(self._flatbuffers, fbname), lenmethod())
         else:
-            out = LazyList(lambda: finalize(getattr(self._flatbuffers, fbname)()), finalize, lenmethod())
-        setattr(self, "_" + name, out)
+            out = LazyList(lambda i: finalize(getattr(self._flatbuffers, fbname)(i)), lenmethod())
+        setattr(self, uname, out)
         return out
 
     @prop.setter

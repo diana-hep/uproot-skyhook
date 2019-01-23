@@ -27,3 +27,25 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import os
+import shutil
+
+if __name__ == "__main__":
+    os.rename(os.path.join("uproot_skyhook", "__init__.py"), os.path.join("uproot_skyhook.__init__.py"))
+
+    if os.path.exists(os.path.join("uproot_skyhook", "interpretation_generated")):
+        shutil.rmtree(os.path.join("uproot_skyhook", "interpretation_generated"))
+
+    if os.path.exists(os.path.join("uproot_skyhook", "layout_generated")):
+        shutil.rmtree(os.path.join("uproot_skyhook", "layout_generated"))
+
+    os.system("flatc --python interpretation.fbs")
+    os.system("flatc --python layout.fbs")
+
+    with open(os.path.join("uproot_skyhook", "layout_generated", "Column.py")) as f:
+        tmp = f.read().replace("from .Interpretation import Interpretation", "from uproot_skyhook.interpretation_generated.Interpretation import Interpretation")
+    with open(os.path.join("uproot_skyhook", "layout_generated", "Column.py"), "w") as f:
+        f.write(tmp)
+
+    os.rename(os.path.join("uproot_skyhook.__init__.py"), os.path.join("uproot_skyhook", "__init__.py"))

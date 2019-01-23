@@ -124,12 +124,10 @@ class Basket(Layout):
         return self is other or (isinstance(other, Basket) and self.compression == other.compression and self.pages == other.pages and self.data_border == other.data_border)
 
     def _toflatbuffers(self, builder):
-        pages = [x._toflatbuffers(builder) for x in self.pages]
-
-        uproot_skyhook.layout_generated.Basket.BasketStartPagesVector(builder, len(pages))
-        for x in pages[::-1]:
-            builder.PrependUOffsetTRelative(x)
-        pages = builder.EndVector(len(pages))
+        uproot_skyhook.layout_generated.Basket.BasketStartPagesVector(builder, len(self.pages))
+        for x in self.pages[::-1]:
+            x._toflatbuffers(builder)
+        pages = builder.EndVector(len(self.pages))
 
         uproot_skyhook.layout_generated.Basket.BasketStart(builder)
         uproot_skyhook.layout_generated.Basket.BasketAddCompression(builder, self.compression.value)
@@ -254,7 +252,7 @@ class File(Layout):
 class Dataset(Layout):
     name = uproot_skyhook.lazyobject.lazyproperty("name", finalize_string)
     treepath = uproot_skyhook.lazyobject.lazyproperty("treepath", finalize_string)
-    colnames = uproot_skyhook.lazyobject.lazyproperty("columns", finalize_string)
+    colnames = uproot_skyhook.lazyobject.lazyproperty("colnames", finalize_string)
     columns = uproot_skyhook.lazyobject.lazyproperty("columns", Column.fromflatbuffers)
     files = uproot_skyhook.lazyobject.lazyproperty("files", File.fromflatbuffers)
     location_prefix = uproot_skyhook.lazyobject.lazyproperty("location_prefix", finalize_string)

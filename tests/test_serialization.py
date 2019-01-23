@@ -60,8 +60,18 @@ class Test(unittest.TestCase):
         columns = [Column(asdtype(float)), Column(asjagged(asdtype(int))), Column(asstlbitset(17))]
 
         dataset = Dataset("dataset", "treepath", colnames, columns, files, [0, 1000, 2000], "location_prefix")
-        serialized = uproot_skyhook.layout.tobuffer(dataset)
-        assert uproot_skyhook.layout.frombuffer(serialized) == dataset
+        # serialized = uproot_skyhook.layout.tobuffer(dataset)
+        # deserialized = uproot_skyhook.layout.frombuffer(serialized)
+        # print(deserialized.name)
+        # print(deserialized.treepath)
+        # print(deserialized.colnames)
+        # print(deserialized.columns)
+        # print(deserialized.files)
+        # print(deserialized.global_offsets)
+        # print(deserialized.location_prefix)
+        # assert deserialized.files[0].branches[0].baskets[0].pages[0].uncompressedbytes == dataset.files[0].branches[0].baskets[0].pages[0].uncompressedbytes
+
+        assert Dataset.fromflatbuffers(uproot_skyhook.layout_generated.Dataset.Dataset.GetRootAsDataset(uproot_skyhook.layout.tobuffer(dataset), 0)) == dataset
 
     def roundtrip_interp(self, interp):
         builder = flatbuffers.Builder(1024)
