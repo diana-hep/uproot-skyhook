@@ -169,12 +169,23 @@ class Branch(Layout):
         return self.local_offsets[-1]
 
 class Column(Layout):
-    interp = uproot_skyhook.lazyobject.lazyproperty("interp", uproot_skyhook.interpretation.interp_fromflatbuffers)
+    interp = uproot_skyhook.lazyobject.lazyproperty("interp", uproot_skyhook.interpretation.fromflatbuffers)
     title = uproot_skyhook.lazyobject.lazyproperty("title", finalize_string)
 
     def __init__(self, interp, title=None):
         self.interp = interp
         self.title = title
+
+    def _toflatbuffers(self, builder):
+        interp = uproot_skyhook.interpretation.toflatbuffers(builder, self.interp)
+        if self.title is not None:
+            title = builder.CreateString(self.title.encode("utf-8"))
+
+        uproot_skyhook.layout_generated.Column.ColumnStart(builder)
+        uproot_skyhook.layout_generated.Column.ColumnAddInterp(builder, interp)
+        if self.title is not None:
+            uproot_skyhook.layout_generated.Column.ColumnAddTitle(builder, title)
+        return uproot_skyhook.layout_generated.Column.ColumnEnd(builder)
 
 class File(Layout):
     location = uproot_skyhook.lazyobject.lazyproperty("location", finalize_string)

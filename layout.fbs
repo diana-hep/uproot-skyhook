@@ -46,7 +46,7 @@ struct Page {
 
 table Basket {
   compression: Compression;
-  pages: [Page];
+  pages: [Page] (required);
   data_border: ulong;
 }
 

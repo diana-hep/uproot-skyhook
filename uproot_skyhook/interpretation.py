@@ -98,10 +98,10 @@ fb2dtype = {
     uproot_skyhook.interpretation_generated.DType.DType.dtype_float64: numpy.dtype(numpy.float64),
     }
 
-def interp_frombuffer(buffer, offset=0):
-    return interp_fromflatbuffers(uproot_skyhook.interpretation_generated.Interpretation.Interpretation.GetRootAsInterpretation(buffer, offset))
+def frombuffer(buffer, offset=0):
+    return fromflatbuffers(uproot_skyhook.interpretation_generated.Interpretation.Interpretation.GetRootAsInterpretation(buffer, offset))
 
-def interp_fromflatbuffers(fb):
+def fromflatbuffers(fb):
     datatype = fb.DataType()
     data = fb.Data()
 
@@ -159,7 +159,7 @@ def interp_fromflatbuffers(fb):
     elif datatype == uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.Jagged:
         fb2 = uproot_skyhook.interpretation_generated.Jagged.Jagged()
         fb2.Init(data.Bytes, data.Pos)
-        return uproot.asjagged(interp_fromflatbuffers(fb2.Content()), fb2.Skipbytes())
+        return uproot.asjagged(fromflatbuffers(fb2.Content()), fb2.Skipbytes())
 
     elif datatype == uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.String:
         fb2 = uproot_skyhook.interpretation_generated.String.String()
@@ -170,7 +170,7 @@ def interp_fromflatbuffers(fb):
         fb2 = uproot_skyhook.interpretation_generated.TableObj.TableObj()
         fb2.Init(data.Bytes, data.Pos)
 
-        content = interp_fromflatbuffers(fb2.Content())
+        content = fromflatbuffers(fb2.Content())
         qualname = [fb2.Qualname(i).decode("utf-8") for i in range(fb2.QualnameLength())]
         gen, genname = importlib.import_module(qualname[0]), qualname[1:]
         while len(genname) > 0:
@@ -181,7 +181,7 @@ def interp_fromflatbuffers(fb):
     else:
         raise AssertionError(datatype)
 
-def interp_toflatbuffers(builder, interp):
+def toflatbuffers(builder, interp):
     if isinstance(interp, uproot.asdtype):
         if interp.fromdtype.names is None and interp.todtype.names is None:
             if interp.fromdtype.subdtype is None:
@@ -322,7 +322,7 @@ def interp_toflatbuffers(builder, interp):
         datatype = uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.STLBitSet
 
     elif isinstance(interp, uproot.asjagged):
-        content = interp_toflatbuffers(builder, interp.content)
+        content = toflatbuffers(builder, interp.content)
         uproot_skyhook.interpretation_generated.Jagged.JaggedStart(builder)
         uproot_skyhook.interpretation_generated.Jagged.JaggedAddContent(builder, content)
         uproot_skyhook.interpretation_generated.Jagged.JaggedAddSkipbytes(builder, interp.skipbytes)
@@ -336,7 +336,7 @@ def interp_toflatbuffers(builder, interp):
         datatype = uproot_skyhook.interpretation_generated.InterpretationData.InterpretationData.String
 
     elif isinstance(interp, uproot.asobj) and isinstance(interp.content, uproot.astable):
-        content = interp_toflatbuffers(builder, interp.content.content)
+        content = toflatbuffers(builder, interp.content.content)
         qualname = [builder.CreateString(x.encode("utf-8")) for x in (interp.cls.__module__, interp.cls.__name__)]
         uproot_skyhook.interpretation_generated.TableObj.TableObjStartQualnameVector(builder, len(qualname))
         for x in qualname[::-1]:
