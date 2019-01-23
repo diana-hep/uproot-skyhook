@@ -215,7 +215,7 @@ class Column(Layout):
 
 class File(Layout):
     location = uproot_skyhook.lazyobject.lazyproperty("location", finalize_string)
-    uuid = uproot_skyhook.lazyobject.lazyproperty("uuid", finalize_string)
+    uuid = uproot_skyhook.lazyobject.lazyproperty("uuid", None)
     branches = uproot_skyhook.lazyobject.lazyproperty("branches", Branch.fromflatbuffers)
 
     def __init__(self, location, uuid, branches):
@@ -234,7 +234,7 @@ class File(Layout):
         branches = builder.EndVector(len(branches))
 
         location = builder.CreateString(self.location.encode("utf-8"))
-        uuid = builder.CreateString(self.uuid.encode("utf-8"))
+        uuid = builder.CreateString(self.uuid)
 
         uproot_skyhook.layout_generated.File.FileStart(builder)
         uproot_skyhook.layout_generated.File.FileAddLocation(builder, location)
