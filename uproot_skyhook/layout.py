@@ -154,6 +154,10 @@ class Branch(Layout):
     def local_offsets(self, value):
         self._local_offsets = value
 
+    @classmethod
+    def empty(cls):
+        return cls([0], [])
+
     def __init__(self, local_offsets, baskets):
         local_offsets = numpy.array(local_offsets, dtype="<u8", copy=False)
 
@@ -276,6 +280,9 @@ class Dataset(Layout):
         if len(colnames) != len(columns):
             raise ValueError("colnames and columns must have the same length")
 
+        if len(colnames) != len(set(colnames)):
+            raise ValueError("colnames must be unique")
+
         global_offsets = numpy.array(global_offsets, dtype="<u8", copy=False)
 
         if len(global_offsets) == 0 or global_offsets[0] != 0:
@@ -299,6 +306,39 @@ class Dataset(Layout):
 
     def __eq__(self, other):
         return self is other or (isinstance(other, Dataset) and self.name == other.name and self.treepath == other.treepath and self.colnames == other.colnames and self.columns == other.columns and self.files == other.files and numpy.array_equal(self.global_offsets, other.global_offsets) and self.location_prefix == other.location_prefix)
+
+    def __add__(self, other):
+        if not isinstance(other, Dataset):
+            raise ValueError("cannot add {0} and {1}".format(type(self), type(other)))
+        if self.name != other.name:
+            raise ValueError("dataset names differ: {0} and {1}".format(repr(self.name), repr(other.name)))
+        if self.treepath != other.treepath:
+            raise ValueError("dataset treepaths differ: {0} and {1}".format(repr(self.treepath), repr(other.treepath)))
+        if self.location_prefix != other.location_prefix:
+            raise ValueError("dataset location_prefixes differ: {0} and {1}".format(repr(self.location_prefix), repr(other.location_prefix)))
+
+        # ??? have to think about this
+
+        colnames = list(self.colnames)
+        columns = list(self.columns)
+        lookup = {n: i for i, n in enumerate(colnames)}
+        selfmap = list(range(len(colnames)))
+        othermap = []
+        for n, x in zip(other.colnames, other.columns):
+            if n not in lookup:
+                lookup[n] = len(colnames)
+                colnames.append(n)
+                columns.append(x)
+                selfmap.append(None)
+            othermap.append(lookup[n])
+                
+        HERE # update the Files here
+
+        global_offsets = numpy.array(len(self.global_offsets) + len(other.global_offsets), dtype="<u8")
+        global_offsets[:len(self.global_offsets)] = self.global_offsets
+        global_offsets[len(self.global_offsets):] = other.global_offsets + self.global_offsets[-1]
+
+
 
     def _toflatbuffers(self, builder):
         builder.branchnum = 0
