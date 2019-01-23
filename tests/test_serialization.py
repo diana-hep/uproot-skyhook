@@ -36,10 +36,32 @@ import flatbuffers
 import uproot
 import uproot_methods
 import uproot_skyhook.interpretation
+import uproot_skyhook.layout
 
 class Test(unittest.TestCase):
     def runTest(self):
         pass
+
+    def test_serialization_dataset(self):
+        from uproot_skyhook.layout import zlib, Page, Basket, Branch, File, Column, Dataset
+        from uproot import asdtype, asjagged, asstlbitset
+
+        branch1 = Branch([0, 100, 1000], [Basket(zlib, [Page(123, 100, 200)], 0), Basket(zlib, [Page(1234, 100, 200)], 0)])
+        branch2 = Branch([0, 1000], [Basket(zlib, [Page(12345, 100, 200)], 10000)])
+        branch3 = Branch([0, 100, 1000], [Basket(zlib, [Page(123456, 100, 200)], 0), Basket(zlib, [Page(1234567, 100, 200)], 0)])
+
+        branch4 = Branch([0, 100, 1000], [Basket(zlib, [Page(123, 100, 200)], 0), Basket(zlib, [Page(1234, 100, 200)], 0)])
+        branch5 = Branch([0, 1000], [Basket(zlib, [Page(12345, 100, 200)], 10000)])
+        branch6 = Branch([0, 100, 1000], [Basket(zlib, [Page(123456, 100, 200)], 0), Basket(zlib, [Page(1234567, 100, 200)], 0)])
+
+        files = [File("file1", "abbacdbad", [branch1, branch2, branch3]), File("file2", "decafcafe", [branch4, branch5, branch6])]
+
+        colnames = ["one", "two", "three"]
+        columns = [Column(asdtype(float)), Column(asjagged(asdtype(int))), Column(asstlbitset(17))]
+
+        dataset = Dataset("dataset", "treepath", colnames, columns, files, [0, 1000, 2000], "location_prefix")
+        serialized = uproot_skyhook.layout.tobuffer(dataset)
+        assert uproot_skyhook.layout.frombuffer(serialized) == dataset
 
     def roundtrip_interp(self, interp):
         builder = flatbuffers.Builder(1024)

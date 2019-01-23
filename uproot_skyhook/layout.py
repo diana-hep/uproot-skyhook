@@ -76,10 +76,13 @@ compressions = {
 
 class Layout(object):
     @classmethod
-    def fromflatbuffers(cls, flatbuffers):
+    def fromflatbuffers(cls, fb):
         self = cls.__new__(cls)
-        self._flatbuffers = flatbuffers
+        self._flatbuffers = fb
         return self
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 def finalize_string(x):
     if x is None:
@@ -97,6 +100,9 @@ class Page(Layout):
         self.compressedbytes = compressedbytes
         self.uncompressedbytes = uncompressedbytes
 
+    def __eq__(self, other):
+        return self is other or (isinstance(other, Page) and self.file_seek == other.file_seek and self.compressedbytes == other.compressedbytes and self.uncompressedbytes == other.uncompressedbytes)
+
     def _toflatbuffers(self, builder):
         return uproot_skyhook.layout_generated.Page.CreatePage(builder, self.file_seek, self.compressedbytes, self.uncompressedbytes)
 
@@ -113,6 +119,9 @@ class Basket(Layout):
         self.compression = compression
         self.pages = pages
         self.data_border = data_border
+
+    def __eq__(self, other):
+        return self is other or (isinstance(other, Basket) and self.compression == other.compression and self.pages == other.pages and self.data_border == other.data_border)
 
     def _toflatbuffers(self, builder):
         pages = [x._toflatbuffers(builder) for x in self.pages]
@@ -133,8 +142,19 @@ class Basket(Layout):
         return any(x.compressed for x in self.pages)
 
 class Branch(Layout):
-    local_offsets = uproot_skyhook.lazyobject.lazyproperty("local_offsets", None)
     baskets = uproot_skyhook.lazyobject.lazyproperty("baskets", Basket.fromflatbuffers)
+
+    @property
+    def local_offsets(self):
+        out = getattr(self, "_local_offsets", None)
+        if out is not None:
+            return out
+        self._local_offsets = self._flatbuffers.LocalOffsetsAsNumpy()
+        return self._local_offsets
+
+    @local_offsets.setter
+    def local_offsets(self, value):
+        self._local_offsets = value
 
     def __init__(self, local_offsets, baskets):
         local_offsets = numpy.array(local_offsets, dtype="<u8", copy=False)
@@ -143,9 +163,14 @@ class Branch(Layout):
             raise ValueError("local_offsets must start with 0")
         if not (local_offsets[1:] >= local_offsets[:-1]).all():
             raise ValueError("local_offsets must be monatonically increasing")
+        if len(local_offsets) != len(baskets) + 1:
+            raise ValueError("len(local_offsets) must be len(baskets) + 1")
 
         self.local_offsets = local_offsets
         self.baskets = baskets
+
+    def __eq__(self, other):
+        return self is other or (isinstance(other, Branch) and numpy.array_equal(self.local_offsets, other.local_offsets) and self.baskets == other.baskets)
 
     def _toflatbuffers(self, builder):
         baskets = [x._toflatbuffers(builder) for x in self.baskets]
@@ -176,6 +201,9 @@ class Column(Layout):
         self.interp = interp
         self.title = title
 
+    def __eq__(self, other):
+        return self is other or (isinstance(other, Column) and self.interp.identifier == other.interp.identifier and self.title == other.title)
+
     def _toflatbuffers(self, builder):
         interp = uproot_skyhook.interpretation.toflatbuffers(builder, self.interp)
         if self.title is not None:
@@ -196,6 +224,9 @@ class File(Layout):
         self.location = location
         self.uuid = uuid
         self.branches = branches
+
+    def __eq__(self, other):
+        return self is other or (isinstance(other, File) and self.location == other.location and self.uuid == other.uuid and self.branches == other.branches)
 
     def _toflatbuffers(self, builder):
         branches = [x._toflatbuffers(builder) for x in self.branches]
@@ -226,27 +257,32 @@ class Dataset(Layout):
     colnames = uproot_skyhook.lazyobject.lazyproperty("columns", finalize_string)
     columns = uproot_skyhook.lazyobject.lazyproperty("columns", Column.fromflatbuffers)
     files = uproot_skyhook.lazyobject.lazyproperty("files", File.fromflatbuffers)
-    global_offsets = uproot_skyhook.lazyobject.lazyproperty("global_offsets", None)
     location_prefix = uproot_skyhook.lazyobject.lazyproperty("location_prefix", finalize_string)
 
-    def __init__(self, name, treepath, colnames, columns, files, global_offsets=None, location_prefix=None):
+    @property
+    def global_offsets(self):
+        out = getattr(self, "_global_offsets", None)
+        if out is not None:
+            return out
+        self._global_offsets = self._flatbuffers.GlobalOffsetsAsNumpy()
+        return self._global_offsets
+
+    @global_offsets.setter
+    def global_offsets(self, value):
+        self._global_offsets = value
+
+    def __init__(self, name, treepath, colnames, columns, files, global_offsets, location_prefix=None):
         if len(colnames) != len(columns):
             raise ValueError("colnames and columns must have the same length")
 
-        if global_offsets is None:
-            if len(files) == 0:
-                global_offsets = numpy.array([0], dtype="<u8")
-            else:
-                global_offsets = numpy.empty(len(files) + 1, dtype="<u8")
-                global_offsets[0] = 0
-                global_offsets[1:] = numpy.cumsum(x.numentries for x in files)
-        else:
-            global_offsets = numpy.array(global_offsets, copy=False)
+        global_offsets = numpy.array(global_offsets, copy=False)
 
         if len(global_offsets) == 0 or global_offsets[0] != 0:
             raise ValueError("global_offsets must start with 0")
         if not (global_offsets[1:] >= global_offsets[:-1]).all():
             raise ValueError("global_offsets must be monatonically increasing")
+        if len(global_offsets) != len(files) + 1:
+            raise ValueError("len(global_offsets) must be len(files) + 1")
 
         self.name = name
         self.treepath = treepath
@@ -255,3 +291,58 @@ class Dataset(Layout):
         self.files = files
         self.global_offsets = global_offsets
         self.location_prefix = location_prefix
+
+    def __eq__(self, other):
+        return self is other or (isinstance(other, Dataset) and self.name == other.name and self.treepath == other.treepath and self.colnames == other.colnames and self.columns == other.columns and self.files == other.files and numpy.array_equal(self.global_offsets, other.global_offsets) and self.location_prefix == other.location_prefix)
+
+    def _toflatbuffers(self, builder):
+        files = [x._toflatbuffers(builder) for x in self.files]
+        uproot_skyhook.layout_generated.Dataset.DatasetStartFilesVector(builder, len(files))
+        for x in files[::-1]:
+            builder.PrependUOffsetTRelative(x)
+        files = builder.EndVector(len(files))
+
+        columns = [x._toflatbuffers(builder) for x in self.columns]
+        uproot_skyhook.layout_generated.Dataset.DatasetStartColumnsVector(builder, len(columns))
+        for x in columns[::-1]:
+            builder.PrependUOffsetTRelative(x)
+        columns = builder.EndVector(len(columns))
+
+        colnames = [builder.CreateString(x.encode("utf-8")) for x in self.colnames]
+        uproot_skyhook.layout_generated.Dataset.DatasetStartColnamesVector(builder, len(colnames))
+        for x in colnames[::-1]:
+            builder.PrependUOffsetTRelative(x)
+        colnames = builder.EndVector(len(colnames))
+
+        uproot_skyhook.layout_generated.Dataset.DatasetStartGlobalOffsetsVector(builder, len(self.global_offsets))
+        builder.head = builder.head - self.global_offsets.nbytes
+        builder.Bytes[builder.head : builder.head + self.global_offsets.nbytes] = self.global_offsets.tostring()
+        global_offsets = builder.EndVector(len(self.global_offsets))
+
+        name = builder.CreateString(self.name.encode("utf-8"))
+        treepath = builder.CreateString(self.treepath.encode("utf-8"))
+        location_prefix = builder.CreateString(self.location_prefix.encode("utf-8"))
+
+        uproot_skyhook.layout_generated.Dataset.DatasetStart(builder)
+        uproot_skyhook.layout_generated.Dataset.DatasetAddName(builder, name)
+        uproot_skyhook.layout_generated.Dataset.DatasetAddTreepath(builder, treepath)
+        uproot_skyhook.layout_generated.Dataset.DatasetAddColnames(builder, colnames)
+        uproot_skyhook.layout_generated.Dataset.DatasetAddColumns(builder, columns)
+        uproot_skyhook.layout_generated.Dataset.DatasetAddFiles(builder, files)
+        uproot_skyhook.layout_generated.Dataset.DatasetAddGlobalOffsets(builder, global_offsets)
+        uproot_skyhook.layout_generated.Dataset.DatasetAddLocationPrefix(builder, location_prefix)
+        return uproot_skyhook.layout_generated.Dataset.DatasetEnd(builder)
+
+def frombuffer(buffer, offset=0):
+    return fromflatbuffers(uproot_skyhook.layout_generated.Dataset.Dataset.GetRootAsDataset(buffer, offset))
+
+def fromflatbuffers(fb):
+    return Dataset.fromflatbuffers(fb)
+
+def tobuffer(dataset):
+    builder = flatbuffers.Builder(1024)
+    builder.Finish(toflatbuffers(builder, dataset))
+    return builder.Output()
+
+def toflatbuffers(builder, dataset):
+    return dataset._toflatbuffers(builder)
