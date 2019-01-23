@@ -30,7 +30,7 @@ include "interpretation.fbs";
 
 namespace uproot_skyhook.layout_generated;
 
-enum Compression: byte {
+enum Compression: int {
   none = 0,
   zlib = 1,
   lzma = 2,
