@@ -97,6 +97,9 @@ class Page(Layout):
         self.compressedbytes = compressedbytes
         self.uncompressedbytes = uncompressedbytes
 
+    def _toflatbuffers(self, builder):
+        return uproot_skyhook.layout_generated.Page.CreatePage(builder, self.file_seek, self.compressedbytes, self.uncompressedbytes)
+
     @property
     def compressed(self):
         return self.compressedbytes != self.uncompressedbytes
@@ -111,6 +114,20 @@ class Basket(Layout):
         self.pages = pages
         self.data_border = data_border
 
+    def _toflatbuffers(self, builder):
+        pages = [x._toflatbuffers(builder) for x in self.pages]
+
+        uproot_skyhook.layout_generated.Basket.BasketStartPagesVector(builder, len(pages))
+        for x in pages[::-1]:
+            builder.PrependUOffsetTRelative(x)
+        pages = builder.EndVector(len(pages))
+
+        uproot_skyhook.layout_generated.Basket.BasketStart(builder)
+        uproot_skyhook.layout_generated.Basket.BasketAddCompression(builder, self.compression.value)
+        uproot_skyhook.layout_generated.Basket.BasketAddPages(builder, pages)
+        uproot_skyhook.layout_generated.Basket.BasketAddDataBorder(builder, self.data_border)
+        return uproot_skyhook.layout_generated.Basket.BasketEnd(builder)
+
     @property
     def compressed(self):
         return any(x.compressed for x in self.pages)
@@ -120,7 +137,7 @@ class Branch(Layout):
     baskets = uproot_skyhook.lazyobject.lazyproperty("baskets", Basket.fromflatbuffers)
 
     def __init__(self, local_offsets, baskets):
-        local_offsets = numpy.array(local_offsets, copy=False)
+        local_offsets = numpy.array(local_offsets, dtype="<u8", copy=False)
 
         if len(local_offsets) == 0 or local_offsets[0] != 0:
             raise ValueError("local_offsets must start with 0")
@@ -129,6 +146,23 @@ class Branch(Layout):
 
         self.local_offsets = local_offsets
         self.baskets = baskets
+
+    def _toflatbuffers(self, builder):
+        baskets = [x._toflatbuffers(builder) for x in self.baskets]
+        uproot_skyhook.layout_generated.Branch.BranchStartBasketsVector(builder, len(baskets))
+        for x in baskets[::-1]:
+            builder.PrependUOffsetTRelative(x)
+        baskets = builder.EndVector(len(baskets))
+
+        uproot_skyhook.layout_generated.Branch.BranchStartLocalOffsetsVector(builder, len(self.local_offsets))
+        builder.head = builder.head - self.local_offsets.nbytes
+        builder.Bytes[builder.head : builder.head + len(self.local_offsets)] = self.local_offsets.tostring()
+        local_offsets = builder.EndVector(len(self.local_offsets))
+
+        uproot_skyhook.layout_generated.Branch.BranchStart(builder)
+        uproot_skyhook.layout_generated.Branch.BranchAddLocalOffsets(builder, local_offsets)
+        uproot_skyhook.layout_generated.Branch.BranchAddBaskets(builder, baskets)
+        return uproot_skyhook.layout_generated.Branch.BranchEnd(builder)
 
     @property
     def numentries(self):
@@ -174,9 +208,9 @@ class Dataset(Layout):
 
         if global_offsets is None:
             if len(files) == 0:
-                global_offsets = numpy.array([0], dtype=numpy.uint64)
+                global_offsets = numpy.array([0], dtype="<u8")
             else:
-                global_offsets = numpy.empty(len(files) + 1, dtype=numpy.uint64)
+                global_offsets = numpy.empty(len(files) + 1, dtype="<u8")
                 global_offsets[0] = 0
                 global_offsets[1:] = numpy.cumsum(x.numentries for x in files)
         else:
