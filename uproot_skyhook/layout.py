@@ -156,7 +156,7 @@ class Branch(Layout):
 
         uproot_skyhook.layout_generated.Branch.BranchStartLocalOffsetsVector(builder, len(self.local_offsets))
         builder.head = builder.head - self.local_offsets.nbytes
-        builder.Bytes[builder.head : builder.head + len(self.local_offsets)] = self.local_offsets.tostring()
+        builder.Bytes[builder.head : builder.head + self.local_offsets.nbytes] = self.local_offsets.tostring()
         local_offsets = builder.EndVector(len(self.local_offsets))
 
         uproot_skyhook.layout_generated.Branch.BranchStart(builder)
@@ -196,6 +196,22 @@ class File(Layout):
         self.location = location
         self.uuid = uuid
         self.branches = branches
+
+    def _toflatbuffers(self, builder):
+        branches = [x._toflatbuffers(builder) for x in self.branches]
+        uproot_skyhook.layout_generated.File.FileStartBranchesVector(builder, len(branches))
+        for x in branches[::-1]:
+            builder.PrependUOffsetTRelative(x)
+        branches = builder.EndVector(len(branches))
+
+        location = builder.CreateString(self.location.encode("utf-8"))
+        uuid = builder.CreateString(self.uuid.encode("utf-8"))
+
+        uproot_skyhook.layout_generated.File.FileStart(builder)
+        uproot_skyhook.layout_generated.File.FileAddLocation(builder, location)
+        uproot_skyhook.layout_generated.File.FileAddUuid(builder, uuid)
+        uproot_skyhook.layout_generated.File.FileAddBranches(builder, branches)
+        return uproot_skyhook.layout_generated.File.FileEnd(builder)
 
     @property
     def numentries(self):
