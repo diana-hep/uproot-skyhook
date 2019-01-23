@@ -35,25 +35,27 @@ import uproot_skyhook.layout
 def file(name, filepath, treepath, location_prefix=None, localsource=uproot.MemmapSource.defaults, xrootdsource=uproot.XRootDSource.defaults, httpsource=uproot.HTTPSource.defaults, **options):
     fullfilepath = filepath if location_prefix is None else location_prefix + filepath
     uprootfile = uproot.open(fullfilepath, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
-    uproottree = f[treepath]
 
     numentries = 0
     colnames = []
     columns = []
     branches = []
-    for branchname, uprootbranch in uproottree.iteritems(recursive=True):
-        if uproot.numbaskets != uprootbranch._numgoodbaskets:
+    for branchname, uprootbranch in uprootfile[treepath].iteritems(recursive=True):
+        if branchname != b"Muon_pt":
+            continue
+
+        if uprootbranch.numbaskets != uprootbranch._numgoodbaskets:
             raise NotImplementedError("branch recovery not handled by uproot-skyhook")
 
         baskets = []
-        for i in range(uproot.numbaskets):
+        for i in range(uprootbranch.numbaskets):
             source = uprootbranch._source.threadlocal()
             key = uprootbranch._basketkey(source, i, True)
             cursor = uproot.source.cursor.Cursor(key._fSeekKey + key._fKeylen)
 
             compression = uproot_skyhook.layout.none
-            compressedbytes = self._fNbytes - self._fKeylen
-            uncompressedbytes = self._fObjlen
+            compressedbytes = key._fNbytes - key._fKeylen
+            uncompressedbytes = key._fObjlen
 
             if compressedbytes == uncompressedbytes:
                 pages = [uproot_skyhook.layout.Page(cursor.index, compressedbytes, uncompressedbytes)]
@@ -75,15 +77,16 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
                     elif algo == b"CS":
                         raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
 
-                    pages.append(Page(cursor.index, cbytes, uncbytes))
+                    pages.append(uproot_skyhook.layout.Page(cursor.index, cbytes, uncbytes))
                     cursor.skip(cbytes)
 
             data_border = 0 if key._fObjlen == key.border else key.border
-            baskets.append(Basket(compression, pages, data_border))
+            baskets.append(uproot_skyhook.layout.Basket(compression, pages, data_border))
 
         colnames.append(branchname.decode("utf-8"))
         columns.append(uproot_skyhook.layout.Column(uprootbranch.interpretation, uprootbranch.title))
-        branches.append(uproot_skyhook.layout.Branch(uprootbranch._fBasketEntry[:uprootbranch.numbaskets], baskets))
+        branches.append(uproot_skyhook.layout.Branch(uprootbranch._fBasketEntry[: uprootbranch.numbaskets + 1], baskets))
+        numentries = max(numentries, branches[-1].local_offsets[-1])
         
     file = uproot_skyhook.layout.File(filepath, uprootfile._context.tfile["_fUUID"], branches)
     return uproot_skyhook.layout.Dataset(name, treepath, colnames, columns, [file], [0, numentries], location_prefix=location_prefix)

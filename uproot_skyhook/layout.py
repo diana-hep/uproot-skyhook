@@ -273,7 +273,7 @@ class Dataset(Layout):
         if len(colnames) != len(columns):
             raise ValueError("colnames and columns must have the same length")
 
-        global_offsets = numpy.array(global_offsets, copy=False)
+        global_offsets = numpy.array(global_offsets, dtype="<u8", copy=False)
 
         if len(global_offsets) == 0 or global_offsets[0] != 0:
             raise ValueError("global_offsets must start with 0")
@@ -289,6 +289,10 @@ class Dataset(Layout):
         self.files = files
         self.global_offsets = global_offsets
         self.location_prefix = location_prefix
+
+    @property
+    def numentries(self):
+        return self.global_offsets[-1]
 
     def __eq__(self, other):
         return self is other or (isinstance(other, Dataset) and self.name == other.name and self.treepath == other.treepath and self.colnames == other.colnames and self.columns == other.columns and self.files == other.files and numpy.array_equal(self.global_offsets, other.global_offsets) and self.location_prefix == other.location_prefix)
