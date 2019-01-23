@@ -89,9 +89,13 @@ def lazyproperty(name, finalize):
         fblenname = fbname + "Length"
         lenmethod = getattr(self._flatbuffers, fblenname, None)
         if lenmethod is None:
-            out = finalize(getattr(self._flatbuffers, fbname)())
+            out = getattr(self._flatbuffers, fbname)()
+            if finalize is not None:
+                out = finalize(out)
+        elif finalize is None:
+            out = LazyList(getattr(self._flatbuffers, fbname), lenmethod())
         else:
-            out = LazyList(lambda: finalize(getattr(self._flatbuffers, fbname)()), lenmethod())
+            out = LazyList(lambda: finalize(getattr(self._flatbuffers, fbname)()), finalize, lenmethod())
         setattr(self, "_" + name, out)
         return out
 

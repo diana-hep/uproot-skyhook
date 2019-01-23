@@ -81,52 +81,116 @@ class Layout(object):
         self._flatbuffers = flatbuffers
         return self
 
+def finalize_string(x):
+    if x is None:
+        return None
+    else:
+        return x.decode("utf-8")
+
 class Page(Layout):
-    file_seek = uproot_skyhook.lazyobject.lazyproperty("file_seek", lambda x: x)
-    compressedbytes = uproot_skyhook.lazyobject.lazyproperty("compressedbytes", lambda x: x)
-    uncompressedbytes = uproot_skyhook.lazyobject.lazyproperty("uncompressedbytes", lambda x: x)
+    file_seek = uproot_skyhook.lazyobject.lazyproperty("file_seek", None)
+    compressedbytes = uproot_skyhook.lazyobject.lazyproperty("compressedbytes", None)
+    uncompressedbytes = uproot_skyhook.lazyobject.lazyproperty("uncompressedbytes", None)
 
     def __init__(self, file_seek, compressedbytes, uncompressedbytes):
         self.file_seek = file_seek
         self.compressedbytes = compressedbytes
         self.uncompressedbytes = uncompressedbytes
 
+    @property
+    def compressed(self):
+        return self.compressedbytes != self.uncompressedbytes
+
 class Basket(Layout):
     compression = uproot_skyhook.lazyobject.lazyproperty("compression", lambda x: compressions[x])
     pages = uproot_skyhook.lazyobject.lazyproperty("pages", Page.fromflatbuffers)
-    data_border = uproot_skyhook.lazyobject.lazyproperty("data_border", lambda x: x)
+    data_border = uproot_skyhook.lazyobject.lazyproperty("data_border", None)
 
     def __init__(self, compression, pages, data_border):
         self.compression = compression
         self.pages = pages
         self.data_border = data_border
 
+    @property
+    def compressed(self):
+        return any(x.compressed for x in self.pages)
+
 class Branch(Layout):
-    local_offsets = uproot_skyhook.lazyobject.lazyproperty("local_offsets", lambda x: x)
+    local_offsets = uproot_skyhook.lazyobject.lazyproperty("local_offsets", None)
     baskets = uproot_skyhook.lazyobject.lazyproperty("baskets", Basket.fromflatbuffers)
 
     def __init__(self, local_offsets, baskets):
+        local_offsets = numpy.array(local_offsets, copy=False)
+
+        if len(local_offsets) == 0 or local_offsets[0] != 0:
+            raise ValueError("local_offsets must start with 0")
+        if not (local_offsets[1:] >= local_offsets[:-1]).all():
+            raise ValueError("local_offsets must be monatonically increasing")
+
         self.local_offsets = local_offsets
         self.baskets = baskets
 
-class Column(Layout):
-    name = uproot_skyhook.lazyobject.lazyproperty("name", lambda x: x.decode("utf-8"))
-    interp = uproot_skyhook.lazyobject.lazyproperty("interp", uproot_skyhook.interpretation.interp_fromflatbuffers)
-    title = uproot_skyhook.lazyobject.lazyproperty("title", lambda x: x.decode("utf-8"))
-    aliases = uproot_skyhook.lazyobject.lazyproperty("aliases", lambda x: x.decode("utf-8"))
+    @property
+    def numentries(self):
+        return self.local_offsets[-1]
 
-    def __init__(self, name, interp, title, aliases):
-        self.name = name
+class Column(Layout):
+    interp = uproot_skyhook.lazyobject.lazyproperty("interp", uproot_skyhook.interpretation.interp_fromflatbuffers)
+    title = uproot_skyhook.lazyobject.lazyproperty("title", finalize_string)
+
+    def __init__(self, interp, title=None):
         self.interp = interp
         self.title = title
-        self.aliases = aliases
 
 class File(Layout):
-    location = uproot_skyhook.lazyobject.lazyproperty("location", lambda x: x.decode("utf-8"))
-    uuid = uproot_skyhook.lazyobject.lazyproperty("uuid", lambda x: x.decode("utf-8"))
+    location = uproot_skyhook.lazyobject.lazyproperty("location", finalize_string)
+    uuid = uproot_skyhook.lazyobject.lazyproperty("uuid", finalize_string)
     branches = uproot_skyhook.lazyobject.lazyproperty("branches", Branch.fromflatbuffers)
 
     def __init__(self, location, uuid, branches):
         self.location = location
-        self.uuid = uuid4
+        self.uuid = uuid
         self.branches = branches
+
+    @property
+    def numentries(self):
+        if len(self.branches) == 0:
+            return 0
+        else:
+            return max(x.numentries for x in self.branches)
+
+class Dataset(Layout):
+    name = uproot_skyhook.lazyobject.lazyproperty("name", finalize_string)
+    treepath = uproot_skyhook.lazyobject.lazyproperty("treepath", finalize_string)
+    colnames = uproot_skyhook.lazyobject.lazyproperty("columns", finalize_string)
+    columns = uproot_skyhook.lazyobject.lazyproperty("columns", Column.fromflatbuffers)
+    files = uproot_skyhook.lazyobject.lazyproperty("files", File.fromflatbuffers)
+    global_offsets = uproot_skyhook.lazyobject.lazyproperty("global_offsets", None)
+    location_prefix = uproot_skyhook.lazyobject.lazyproperty("location_prefix", finalize_string)
+
+    def __init__(self, name, treepath, colnames, columns, files, global_offsets=None, location_prefix=None):
+        if len(colnames) != len(columns):
+            raise ValueError("colnames and columns must have the same length")
+
+        if global_offsets is None:
+            if len(files) == 0:
+                global_offsets = numpy.array([0], dtype=numpy.uint64)
+            else:
+                global_offsets = numpy.empty(len(files) + 1, dtype=numpy.uint64)
+                global_offsets[0] = 0
+                global_offsets[1:] = numpy.cumsum(x.numentries for x in files)
+        else:
+            global_offsets = numpy.array(global_offsets, copy=False)
+
+        if len(global_offsets) == 0 or global_offsets[0] != 0:
+            raise ValueError("global_offsets must start with 0")
+        if not (global_offsets[1:] >= global_offsets[:-1]).all():
+            raise ValueError("global_offsets must be monatonically increasing")
+
+        self.name = name
+        self.treepath = treepath
+        self.colnames = colnames
+        self.columns = columns
+        self.files = files
+        self.global_offsets = global_offsets
+        self.location_prefix = location_prefix

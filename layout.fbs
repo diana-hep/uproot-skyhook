@@ -56,10 +56,8 @@ table Branch {
 }
 
 table Column {
-  name: string (required);
   interp: uproot_skyhook.interpretation_generated.Interpretation (required);
   title: string;
-  aliases: [string];
 }
 
 table File {
@@ -70,7 +68,8 @@ table File {
 
 table Dataset {
   name: string (required);
-  objname: string (required);
+  treepath: string (required);
+  colnames: [string] (required);
   columns: [Column] (required);
   files: [File] (required);
   global_offsets: [ulong] (required);
