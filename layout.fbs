@@ -78,4 +78,4 @@ table Dataset {
 
 file_extension "rootlayout";
 file_identifier "roly";
-// root_type Dataset;
+root_type Dataset;
