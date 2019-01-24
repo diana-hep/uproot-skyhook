@@ -119,8 +119,8 @@ def _baskets(dataset, colindex, entrystart, entrystop):
         location = file.location if dataset.location_prefix is None else dataset.location_prefix + file.location
         with FileArray.open(location) as filearray:
             globalbot, globaltop = int(dataset.global_offsets[filei]), int(dataset.global_offsets[filei + 1])
-            localstart = min(globaltop, max(0, int(entrystart) - int(globalbot)))
-            localstop = min(globaltop, max(0, int(entrystop) - int(globalbot)))
+            localstart = min(globaltop, max(0, int(entrystart) - globalbot))
+            localstop = min(globaltop, max(0, int(entrystop) - globalbot))
 
             basketstart, basketstop = numpy.searchsorted(branch.local_offsets, (localstart, localstop), side="left")
             if branch.local_offsets[basketstart] > localstart:
@@ -156,10 +156,10 @@ def _baskets(dataset, colindex, entrystart, entrystop):
                     byteoffsets[-1] = last
                     numpy.subtract(byteoffsets, keylen, byteoffsets)
 
-                globalstart, globalstop = branch.local_offsets[basketi] + globalbot, branch.local_offsets[basketi + 1] + globalbot
+                globalstart, globalstop = int(branch.local_offsets[basketi]) + globalbot, int(branch.local_offsets[basketi + 1]) + globalbot
                 localbot, localtop = int(branch.local_offsets[basketi]), int(branch.local_offsets[basketi + 1])
-                basketstart = min(localtop, max(0, int(localstart) - int(localbot)))
-                basketstop = min(localtop, max(0, int(localstop) - int(localbot)))
+                basketstart = min(localtop - localbot, max(0, localstart - localbot))
+                basketstop = min(localtop - localbot, max(0, localstop - localbot))
                 yield globalstart, globalstop, localstart, localstop, basketstart, basketstop, data, byteoffsets
 
 class TBranch(object):
@@ -186,9 +186,6 @@ def array(dataset, colname, entrystart=None, entrystop=None):
     
     baskets = _baskets(dataset, colindex, entrystart, entrystop)
     for j, (globalstart, globalstop, localstart, localstop, basketstart, basketstop, data, byteoffsets) in enumerate(baskets):
-
-        print("basketstart", type(basketstart), basketstart, "basketstop", type(basketstop), basketstop)
-
         source = interpretation.fromroot(data, byteoffsets, basketstart, basketstop)
 
         expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
@@ -209,14 +206,12 @@ def array(dataset, colname, entrystart=None, entrystop=None):
             if expectedentries > source_numentries:
                 basket_entryoffset[j] += expectedentries - source_numentries
 
-        print("BEFORE")
         interpretation.fill(source,
                             destination,
                             basket_itemoffset[j],
                             basket_itemoffset[j + 1],
                             basket_entryoffset[j],
                             basket_entryoffset[j + 1])
-        print("AFTER")
 
     clipped = interpretation.clip(destination,
                                   basket_itemoffset[0],
