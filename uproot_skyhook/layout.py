@@ -380,9 +380,9 @@ class Dataset(Layout):
                     branches.append(file.branches[i])
             files.append(File(file.location, file.uuid, branches))
 
-        global_offsets = numpy.array(len(self.global_offsets) + len(other.global_offsets), dtype="<u8")
-        global_offsets[:len(self.global_offsets)] = self.global_offsets
-        global_offsets[len(self.global_offsets):] = other.global_offsets + self.global_offsets[-1]
+        global_offsets = numpy.empty(len(self.global_offsets) + len(other.global_offsets) - 1, dtype="<u8")
+        global_offsets[: len(self.global_offsets) - 1] = self.global_offsets[:-1]
+        global_offsets[len(self.global_offsets) - 1 :] = self.global_offsets[-1] + other.global_offsets
 
         return Dataset(self.name, self.treepath, colnames, columns, files, global_offsets, location_prefix=self.location_prefix)
 

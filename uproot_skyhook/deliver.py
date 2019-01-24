@@ -51,18 +51,22 @@ decompress = {
     uproot_skyhook.layout.lz4: lz4.block.decompress
     }
 
-def array(dataset, colname, entrystart=0, entrystop=-1):
+def array(dataset, colname, entrystart=None, entrystop=None):
     if colname not in dataset.colnames:
         raise ValueError("colname not recognized")
     colindex = dataset.colnames.index(colname)
 
+    if entrystart is None:
+        entrystart = 0
     if entrystart < 0:
         entrystart += dataset.numentries
+    if entrystop is None:
+        entrystop = dataset.numentries
     if entrystop < 0:
         entrystop += dataset.numentries
     if not 0 <= entrystart < dataset.numentries:
         raise ValueError("entrystart out of bounds")
-    if not 0 <= entrystop < dataset.numentries:
+    if not 0 <= entrystop <= dataset.numentries:
         raise ValueError("entrystop out of bounds")
     if entrystop < entrystart:
         raise ValueError("entrystop must be greater than or equal to entrystart")
@@ -78,7 +82,8 @@ def array(dataset, colname, entrystart=0, entrystop=-1):
         location = file.location if dataset.location_prefix is None else dataset.location_prefix + file.location
         with FileArray.open(location) as filearray:
             globalbot, globaltop = dataset.global_offsets[filei], dataset.global_offsets[filei + 1]
-            localstart, localstop = entrystart - globalbot, entrystop - globalbot
+            localstart = min(globaltop, max(0, int(entrystart - globalbot)))
+            localstop = min(globaltop, max(0, int(entrystop - globalbot)))
 
             basketstart, basketstop = numpy.searchsorted(branch.local_offsets, (localstart, localstop), side="left")
             if branch.local_offsets[basketstart] > localstart:
@@ -98,7 +103,8 @@ def array(dataset, colname, entrystart=0, entrystop=-1):
                 else:
                     basketdata = numpy.concatenate(basketdata)
 
-                print(basketdata.view(">f8"))
+                start, stop = branch.local_offsets[basketi] + globalbot, branch.local_offsets[basketi + 1] + globalbot
+
 
 
 
