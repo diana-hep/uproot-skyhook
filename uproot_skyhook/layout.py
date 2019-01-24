@@ -33,8 +33,6 @@ import uproot
 import uproot_skyhook.interpretation
 import uproot_skyhook.lazyobject
 import uproot_skyhook.layout_generated.Compression
-# import uproot_skyhook.layout_generated.Page
-# import uproot_skyhook.layout_generated.Basket
 import uproot_skyhook.layout_generated.Branch
 import uproot_skyhook.layout_generated.Column
 import uproot_skyhook.layout_generated.File
@@ -89,114 +87,6 @@ def finalize_string(x):
         return None
     else:
         return x.decode("utf-8")
-
-# class Page(Layout):
-#     file_seek = uproot_skyhook.lazyobject.lazyproperty("file_seek", None)
-#     compressedbytes = uproot_skyhook.lazyobject.lazyproperty("compressedbytes", None)
-#     uncompressedbytes = uproot_skyhook.lazyobject.lazyproperty("uncompressedbytes", None)
-
-#     def __init__(self, file_seek, compressedbytes, uncompressedbytes):
-#         self.file_seek = file_seek
-#         self.compressedbytes = compressedbytes
-#         self.uncompressedbytes = uncompressedbytes
-
-#     def __eq__(self, other):
-#         return self is other or (isinstance(other, Page) and self.file_seek == other.file_seek and self.compressedbytes == other.compressedbytes and self.uncompressedbytes == other.uncompressedbytes)
-
-#     def _toflatbuffers(self, builder):
-#         return uproot_skyhook.layout_generated.Page.CreatePage(builder, self.file_seek, self.compressedbytes, self.uncompressedbytes)
-
-#     @property
-#     def compressed(self):
-#         return self.compressedbytes != self.uncompressedbytes
-
-# class Basket(Layout):
-#     compression = uproot_skyhook.lazyobject.lazyproperty("compression", lambda x: compressions[x])
-#     pages = uproot_skyhook.lazyobject.lazyproperty("pages", Page.fromflatbuffers)
-#     data_border = uproot_skyhook.lazyobject.lazyproperty("data_border", None)
-
-#     def __init__(self, compression, pages, data_border):
-#         self.compression = compression
-#         self.pages = pages
-#         self.data_border = data_border
-
-#     def __eq__(self, other):
-#         return self is other or (isinstance(other, Basket) and self.compression == other.compression and self.pages == other.pages and self.data_border == other.data_border)
-
-#     def _toflatbuffers(self, builder):
-#         uproot_skyhook.layout_generated.Basket.BasketStartPagesVector(builder, len(self.pages))
-#         for x in self.pages[::-1]:
-#             x._toflatbuffers(builder)
-#         pages = builder.EndVector(len(self.pages))
-
-#         uproot_skyhook.layout_generated.Basket.BasketStart(builder)
-#         uproot_skyhook.layout_generated.Basket.BasketAddCompression(builder, self.compression.value)
-#         uproot_skyhook.layout_generated.Basket.BasketAddPages(builder, pages)
-#         uproot_skyhook.layout_generated.Basket.BasketAddDataBorder(builder, self.data_border)
-#         return uproot_skyhook.layout_generated.Basket.BasketEnd(builder)
-
-#     @property
-#     def compressed(self):
-#         return any(x.compressed for x in self.pages)
-
-# class Branch(Layout):
-#     baskets = uproot_skyhook.lazyobject.lazyproperty("baskets", Basket.fromflatbuffers)
-
-#     @property
-#     def local_offsets(self):
-#         out = getattr(self, "_local_offsets", None)
-#         if out is not None:
-#             return out
-#         self._local_offsets = self._flatbuffers.LocalOffsetsAsNumpy()
-#         return self._local_offsets
-
-#     @local_offsets.setter
-#     def local_offsets(self, value):
-#         self._local_offsets = value
-
-#     @classmethod
-#     def empty(cls):
-#         return cls([0], [])
-
-#     def __init__(self, local_offsets, baskets):
-#         local_offsets = numpy.array(local_offsets, dtype="<u8", copy=False)
-
-#         if len(local_offsets) == 0 or local_offsets[0] != 0:
-#             raise ValueError("local_offsets must start with 0")
-#         if not (local_offsets[1:] >= local_offsets[:-1]).all():
-#             raise ValueError("local_offsets must be monatonically increasing")
-#         if len(local_offsets) != len(baskets) + 1:
-#             raise ValueError("len(local_offsets) must be len(baskets) + 1")
-
-#         self.local_offsets = local_offsets
-#         self.baskets = baskets
-
-#     def __eq__(self, other):
-#         return self is other or (isinstance(other, Branch) and numpy.array_equal(self.local_offsets, other.local_offsets) and self.baskets == other.baskets)
-
-#     def _toflatbuffers(self, builder):
-#         baskets = [x._toflatbuffers(builder) for x in self.baskets]
-#         uproot_skyhook.layout_generated.Branch.BranchStartBasketsVector(builder, len(baskets))
-#         for x in baskets[::-1]:
-#             builder.PrependUOffsetTRelative(x)
-#         baskets = builder.EndVector(len(baskets))
-
-#         uproot_skyhook.layout_generated.Branch.BranchStartLocalOffsetsVector(builder, len(self.local_offsets))
-#         builder.head = builder.head - self.local_offsets.nbytes
-#         builder.Bytes[builder.head : builder.head + self.local_offsets.nbytes] = self.local_offsets.tostring()
-#         local_offsets = builder.EndVector(len(self.local_offsets))
-
-#         uproot_skyhook.layout_generated.Branch.BranchStart(builder)
-#         uproot_skyhook.layout_generated.Branch.BranchAddLocalOffsets(builder, local_offsets)
-#         uproot_skyhook.layout_generated.Branch.BranchAddBaskets(builder, baskets)
-#         return uproot_skyhook.layout_generated.Branch.BranchEnd(builder)
-
-#     @property
-#     def numentries(self):
-#         return self.local_offsets[-1]
-
-
-
 
 class Branch(Layout):
     local_offsets = uproot_skyhook.lazyobject.lazyproperty_numpy("local_offsets")
@@ -328,14 +218,6 @@ class Branch(Layout):
     @property
     def numentries(self):
         return self.local_offsets[-1]
-
-
-
-
-
-
-
-
 
 class Column(Layout):
     interp = uproot_skyhook.lazyobject.lazyproperty("interp", uproot_skyhook.interpretation.fromflatbuffers)

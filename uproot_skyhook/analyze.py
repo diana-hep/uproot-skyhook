@@ -33,62 +33,6 @@ import uproot
 
 import uproot_skyhook.layout
 
-# def file(name, filepath, treepath, location_prefix=None, localsource=uproot.MemmapSource.defaults, xrootdsource=uproot.XRootDSource.defaults, httpsource=uproot.HTTPSource.defaults, **options):
-#     fullfilepath = filepath if location_prefix is None else location_prefix + filepath
-#     uprootfile = uproot.open(fullfilepath, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
-
-#     numentries = 0
-#     colnames = []
-#     columns = []
-#     branches = []
-#     for branchname, uprootbranch in uprootfile[treepath].iteritems(recursive=True):
-#         if uprootbranch.numbaskets != uprootbranch._numgoodbaskets:
-#             raise NotImplementedError("branch recovery not handled by uproot-skyhook")
-
-#         baskets = []
-#         for i in range(uprootbranch.numbaskets):
-#             source = uprootbranch._source.threadlocal()
-#             key = uprootbranch._basketkey(source, i, True)
-#             cursor = uproot.source.cursor.Cursor(key._fSeekKey + key._fKeylen)
-
-#             compression = uproot_skyhook.layout.none
-#             compressedbytes = key._fNbytes - key._fKeylen
-#             uncompressedbytes = key._fObjlen
-
-#             if compressedbytes == uncompressedbytes:
-#                 pages = [uproot_skyhook.layout.Page(cursor.index, compressedbytes, uncompressedbytes)]
-#             else:
-#                 pages = []
-#                 start = cursor.index
-#                 while cursor.index - start < compressedbytes:
-#                     algo, method, c1, c2, c3, u1, u2, u3 = cursor.fields(source.parent(), uproot.source.compressed.CompressedSource._header)
-#                     cbytes = c1 + (c2 << 8) + (c3 << 16)
-#                     uncbytes = u1 + (u2 << 8) + (u3 << 16)
-#                     if algo == b"ZL":
-#                         compression = uproot_skyhook.layout.zlib
-#                     elif algo == b"XZ":
-#                         compression = uproot_skyhook.layout.lzma
-#                     elif algo == b"L4":
-#                         compression = uproot_skyhook.layout.lz4
-#                         cursor.skip(8)
-#                         cbytes -= 8
-#                     elif algo == b"CS":
-#                         raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
-
-#                     pages.append(uproot_skyhook.layout.Page(cursor.index, cbytes, uncbytes))
-#                     cursor.skip(cbytes)
-
-#             data_border = 0 if key._fObjlen == key.border else key.border
-#             baskets.append(uproot_skyhook.layout.Basket(compression, pages, data_border))
-
-#         colnames.append(branchname.decode("utf-8"))
-#         columns.append(uproot_skyhook.layout.Column(uprootbranch.interpretation, None if uprootbranch.title is None else uprootbranch.title.decode("utf-8")))
-#         branches.append(uproot_skyhook.layout.Branch(uprootbranch._fBasketEntry[: uprootbranch.numbaskets + 1], baskets))
-#         numentries = max(numentries, branches[-1].local_offsets[-1])
-        
-#     file = uproot_skyhook.layout.File(filepath, uprootfile._context.tfile["_fUUID"], branches)
-#     return uproot_skyhook.layout.Dataset(name, treepath, colnames, columns, [file], [0, numentries], location_prefix=location_prefix)
-
 def file(name, filepath, treepath, location_prefix=None, localsource=uproot.MemmapSource.defaults, xrootdsource=uproot.XRootDSource.defaults, httpsource=uproot.HTTPSource.defaults, **options):
     fullfilepath = filepath if location_prefix is None else location_prefix + filepath
     uprootfile = uproot.open(fullfilepath, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
@@ -102,7 +46,7 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
             raise NotImplementedError("branch recovery not handled by uproot-skyhook")
 
         local_offsets = uprootbranch._fBasketEntry[: uprootbranch.numbaskets + 1]
-        page_seeks = numpy.empty(uprootbranch.numbaskets, dtype="<u8")   # extremely rare, though possible, for numpages > numbaskets
+        page_seeks = numpy.empty(uprootbranch.numbaskets, dtype="<u8")
         compression = None
         compressedbytes = numpy.empty(uprootbranch.numbaskets, dtype="<u4")
         uncompressedbytes = numpy.empty(uprootbranch.numbaskets, dtype="<u4")
@@ -152,6 +96,7 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
                     elif algo == b"CS":
                         raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
 
+                    # extremely rare, though possible, for numpages > numbaskets
                     if pagei >= len(page_seeks):
                         page_seeks = numpy.resize(page_seeks, int(len(page_seeks)*1.2))
                         compressedbytes = numpy.resize(compressedbytes, int(len(compressedbytes)*1.2))
