@@ -36,17 +36,11 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
     fullfilepath = filepath if location_prefix is None else location_prefix + filepath
     uprootfile = uproot.open(fullfilepath, localsource=localsource, xrootdsource=xrootdsource, httpsource=httpsource, **options)
 
-    numbranches = len(uprootfile[treepath].keys(recursive=True))
-    branchnum = 0
-
     numentries = 0
     colnames = []
     columns = []
     branches = []
     for branchname, uprootbranch in uprootfile[treepath].iteritems(recursive=True):
-        branchnum += 1
-        print(branchnum, numbranches, branchnum/numbranches, branchname.decode("utf-8"))
-
         # if branchname != b"Muon_pt":
         #     continue
 

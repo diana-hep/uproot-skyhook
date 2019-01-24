@@ -54,7 +54,7 @@ class Test(unittest.TestCase):
         branch5 = Branch([0, 1000], [Basket(zlib, [Page(12345, 100, 200)], 10000)])
         branch6 = Branch([0, 100, 1000], [Basket(zlib, [Page(123456, 100, 200)], 0), Basket(zlib, [Page(1234567, 100, 200)], 0)])
 
-        files = [File("file1", "abbacdbad", [branch1, branch2, branch3]), File("file2", "decafcafe", [branch4, branch5, branch6])]
+        files = [File("file1", b"abbacdbad", [branch1, branch2, branch3]), File("file2", b"decafcafe", [branch4, branch5, branch6])]
 
         colnames = ["one", "two", "three"]
         columns = [Column(asdtype(float)), Column(asjagged(asdtype(int))), Column(asstlbitset(17))]

@@ -175,9 +175,6 @@ class Branch(Layout):
         return self is other or (isinstance(other, Branch) and numpy.array_equal(self.local_offsets, other.local_offsets) and self.baskets == other.baskets)
 
     def _toflatbuffers(self, builder):
-        builder.branchnum += 1
-        print(branchnum, branchname.decode("utf-8"))
-
         baskets = [x._toflatbuffers(builder) for x in self.baskets]
         uproot_skyhook.layout_generated.Branch.BranchStartBasketsVector(builder, len(baskets))
         for x in baskets[::-1]:
@@ -362,8 +359,6 @@ class Dataset(Layout):
         return Dataset(self.name, self.treepath, colnames, columns, files, global_offsets, location_prefix=self.location_prefix)
 
     def _toflatbuffers(self, builder):
-        builder.branchnum = 0
-
         files = [x._toflatbuffers(builder) for x in self.files]
         uproot_skyhook.layout_generated.Dataset.DatasetStartFilesVector(builder, len(files))
         for x in files[::-1]:
