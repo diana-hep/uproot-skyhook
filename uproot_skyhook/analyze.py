@@ -42,6 +42,11 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
     columns = []
     branches = []
     for branchname, uprootbranch in uprootfile[treepath].iteritems(recursive=True):
+        if branchname != b"Af8":
+            continue
+
+        print(branchname)
+
         if uprootbranch.numbaskets != uprootbranch._numgoodbaskets:
             raise NotImplementedError("branch recovery not handled by uproot-skyhook yet")
         if numpy.uint8(uprootbranch._tree_iofeatures) & numpy.uint8(uproot.const.kGenerateOffsetMap) != 0:
@@ -58,13 +63,17 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
         basket_data_borders = numpy.zeros(uprootbranch.numbaskets, dtype="<u4")
 
         for i in range(uprootbranch.numbaskets):
+            print(i)
+
             source = uprootbranch._source.threadlocal()
             key = uprootbranch._basketkey(source, i, True)
             cursor = uproot.source.cursor.Cursor(key._fSeekKey + key._fKeylen)
 
             basket_compressedbytes = key._fNbytes - key._fKeylen
             basket_uncompressedbytes = key._fObjlen
-            
+
+            print("isuncompressed", basket_compressedbytes == basket_uncompressedbytes, basket_compressedbytes, basket_uncompressedbytes)
+
             if basket_compressedbytes == basket_uncompressedbytes:
                 pagei = basket_page_offsets[i]
                 page_seeks[pagei] = cursor.index
@@ -76,10 +85,12 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
             else:
                 pagei = basket_page_offsets[i]
                 start = cursor.index
+                total_compressedbytes = 0
                 while cursor.index - start < basket_compressedbytes:
                     algo, method, c1, c2, c3, u1, u2, u3 = cursor.fields(source.parent(), uproot.source.compressed.CompressedSource._header)
                     page_compressedbytes = c1 + (c2 << 8) + (c3 << 16)
                     page_uncompressedbytes = u1 + (u2 << 8) + (u3 << 16)
+                    total_compressedbytes += 9 + page_compressedbytes
                     if algo == b"ZL":
                         if compression is not None and compression != uproot_skyhook.layout.zlib:
                             raise ValueError("different compression used by different baskets")
@@ -96,7 +107,7 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
                         page_compressedbytes -= 8
                     elif algo == b"CS":
                         raise ValueError("unsupported compression algorithm: 'old' (according to ROOT comments, hasn't been used in 20+ years!)")
-
+                    
                     # extremely rare, though possible, for numpages > numbaskets
                     if pagei >= len(page_seeks):
                         page_seeks = numpy.resize(page_seeks, int(len(page_seeks)*1.2))
@@ -109,6 +120,9 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
                     pagei += 1
 
                     cursor.skip(page_compressedbytes)
+
+                if total_compressedbytes != basket_compressedbytes:
+                    raise ValueError("total compressedbytes of all compressed pages ({0}) is not equal to the compressedbytes in the basket key ({1})", total_compressedbytes, basket_compressedbytes)
 
                 basket_page_offsets[i + 1] = pagei
 
