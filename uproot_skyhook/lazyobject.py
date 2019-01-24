@@ -59,7 +59,7 @@ class LazyList(Sequence):
         elif len(tmp) < 100:
             return "[" + ",\n ".join(tmp) + "]"
         else:
-            return "[" + ",\n ".join(tmp[:50]) + ",\n ...\n" + ",\n ".join(tmp[:50]) + "]"
+            return "[" + ",\n ".join(tmp[:50]) + ",\n ...\n " + ",\n ".join(tmp[:50]) + "]"
 
     def __eq__(self, other):
         if not isinstance(other, (LazyList, Iterable)):
@@ -75,10 +75,10 @@ class LazyList(Sequence):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-def lazyproperty(name, finalize):
-    def name2fb(name):
-        return "".join(x.capitalize() for x in name.split("_"))
+def name2fb(name):
+    return "".join(x.capitalize() for x in name.split("_"))
 
+def lazyproperty(name, finalize):
     @property
     def prop(self):
         uname = "_" + name
@@ -96,6 +96,25 @@ def lazyproperty(name, finalize):
             out = LazyList(getattr(self._flatbuffers, fbname), lenmethod())
         else:
             out = LazyList(lambda i: finalize(getattr(self._flatbuffers, fbname)(i)), lenmethod())
+        setattr(self, uname, out)
+        return out
+
+    @prop.setter
+    def prop(self, value):
+        setattr(self, "_" + name, value)
+
+    return prop
+
+def lazyproperty_numpy(name):
+    @property
+    def prop(self):
+        uname = "_" + name
+        out = getattr(self, uname, None)
+        if out is not None:
+            return out
+
+        fbname = name2fb(name) + "AsNumpy"
+        out = getattr(self._flatbuffers, fbname)()
         setattr(self, uname, out)
         return out
 

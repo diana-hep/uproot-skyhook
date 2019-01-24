@@ -38,21 +38,31 @@ enum Compression: int {
   lz4 = 4
 }
 
-struct Page {
-  file_seek: ulong;
-  compressedbytes: int;
-  uncompressedbytes: int;
-}
+// struct Page {
+//   file_seek: ulong;
+//   compressedbytes: int;
+//   uncompressedbytes: int;
+// }
 
-table Basket {
-  compression: Compression;
-  pages: [Page] (required);
-  data_border: ulong;
-}
+// table Basket {
+//   compression: Compression;
+//   pages: [Page] (required);
+//   data_border: ulong;
+// }
+
+// table Branch {
+//   local_offsets: [ulong] (required);
+//   baskets: [Basket] (required);
+// }
 
 table Branch {
   local_offsets: [ulong] (required);
-  baskets: [Basket] (required);
+  page_seeks: [ulong] (required);
+  compression: Compression;
+  compressedbytes: [uint];
+  uncompressedbytes: [uint] (required);
+  basket_page_offsets: [uint] (required);
+  basket_data_borders: [uint];
 }
 
 table Column {
