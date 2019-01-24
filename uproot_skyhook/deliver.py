@@ -51,11 +51,7 @@ decompress = {
     uproot_skyhook.layout.lz4: lz4.block.decompress
     }
 
-def array(dataset, colname, entrystart=None, entrystop=None):
-    if colname not in dataset.colnames:
-        raise ValueError("colname not recognized")
-    colindex = dataset.colnames.index(colname)
-
+def _normalize_entrystartstop(dataset, entrystart, entrystop):
     if entrystart is None:
         entrystart = 0
     if entrystart < 0:
@@ -70,7 +66,43 @@ def array(dataset, colname, entrystart=None, entrystop=None):
         raise ValueError("entrystop out of bounds")
     if entrystop < entrystart:
         raise ValueError("entrystop must be greater than or equal to entrystart")
+    return entrystart, entrystop
 
+def _numitems_numentries(dataset, colindex, interpretation, entrystart, entrystop):
+    filestart, filestop = numpy.searchsorted(dataset.global_offsets, (entrystart, entrystop), side="left")
+    if dataset.global_offsets[filestart] > entrystart:
+        filestart -= 1
+
+    out = []
+    for filei in range(filestart, filestop):
+        file = dataset.files[filei]
+        branch = file.branches[colindex]
+
+        globalbot, globaltop = dataset.global_offsets[filei], dataset.global_offsets[filei + 1]
+        localstart = min(globaltop, max(0, int(entrystart - globalbot)))
+        localstop = min(globaltop, max(0, int(entrystop - globalbot)))
+
+        basketstart, basketstop = numpy.searchsorted(branch.local_offsets, (localstart, localstop), side="left")
+        if branch.local_offsets[basketstart] > localstart:
+            basketstart -= 1
+
+        for basketi in range(basketstart, basketstop):
+            numbytes = sum(branch.uncompressedbytes[pagei] for pagei in range(branch.basket_page_offsets[basketi], branch.basket_page_offsets[basketi + 1]))
+            numentries = branch.local_offsets[basketi + 1] - branch.local_offsets[basketi]
+            out.append((interpretation.numitems(numbytes, numentries), numentries))
+
+    return out
+
+def baskets(dataset, colname, entrystart=None, entrystop=None):
+    if colname not in dataset.colnames:
+        raise ValueError("colname not recognized")
+    colindex = dataset.colnames.index(colname)
+
+    entrystart, entrystop = _normalize_entrystartstop(dataset, entrystart, entrystop)
+
+    return _baskets(dataset, colindex, entrystart, entrystop)
+
+def _baskets(dataset, colindex, entrystart, entrystop):
     filestart, filestop = numpy.searchsorted(dataset.global_offsets, (entrystart, entrystop), side="left")
     if dataset.global_offsets[filestart] > entrystart:
         filestart -= 1
@@ -91,23 +123,98 @@ def array(dataset, colname, entrystart=None, entrystop=None):
 
             for basketi in range(basketstart, basketstop):
                 basketdata = []
+                basket_uncompressedbytes = 0
                 for pagei in range(branch.basket_page_offsets[basketi], branch.basket_page_offsets[basketi + 1]):
                     page_seek = branch.page_seeks[pagei]
                     compressedbytes = branch.compressedbytes[pagei]
                     uncompressedbytes = branch.uncompressedbytes[pagei]
                     compresseddata = filearray[page_seek : page_seek + compressedbytes]
                     basketdata.append(decompress[branch.compression](compresseddata, uncompressedbytes))
+                    basket_uncompressedbytes += uncompressedbytes
 
                 if len(basketdata) == 1:
                     basketdata = basketdata[0]
                 else:
                     basketdata = numpy.concatenate(basketdata)
 
-                start, stop = branch.local_offsets[basketi] + globalbot, branch.local_offsets[basketi + 1] + globalbot
-                start, stop, basketdata
-                print(start, stop, branch.basket_data_borders, branch.basket_keylens)
+                if branch.basket_data_borders is None:
+                    data, byteoffsets = basketdata, None
+                else:
+                    keylen = branch.basket_keylens[basketi]
+                    border = branch.basket_data_borders[basketi]
+                    objlen = basket_uncompressedbytes
+                    last = border + keylen
 
+                    data = basketdata[:border]
+                    byteoffsets = numpy.empty((objlen - border - 4) // 4, dtype=numpy.int32)      # native endian
+                    byteoffsets[:-1] = basketdata[border + 4 : -4].view(">i4")   # read as big-endian and convert
+                    byteoffsets[-1] = last
+                    numpy.subtract(byteoffsets, keylen, byteoffsets)
 
+                globalstart, globalstop = branch.local_offsets[basketi] + globalbot, branch.local_offsets[basketi + 1] + globalbot
+                localbot, localtop = branch.local_offsets[basketi], branch.local_offsets[basketi + 1]
+                basketstart = min(localtop, max(0, int(localstart - localbot)))
+                basketstop = min(localtop, max(0, int(localstop - localbot)))
+                yield globalstart, globalstop, localstart, localstop, basketstart, basketstop, data, byteoffsets
+
+class TBranch(object):
+    _fLeaves = ()
+
+def array(dataset, colname, entrystart=None, entrystop=None):
+    if colname not in dataset.colnames:
+        raise ValueError("colname not recognized")
+    colindex = dataset.colnames.index(colname)
+    column = dataset.columns[colindex]
+    interpretation = column.interp
+
+    entrystart, entrystop = _normalize_entrystartstop(dataset, entrystart, entrystop)
+
+    numitems_numentries = _numitems_numentries(dataset, colindex, interpretation, entrystart, entrystop)
+    basket_itemoffset = numpy.empty(len(numitems_numentries) + 1, dtype=int)
+    basket_entryoffset = numpy.empty(len(numitems_numentries) + 1, dtype=int)
+    basket_itemoffset[0] = 0
+    basket_entryoffset[0] = 0
+    basket_itemoffset[1:] = numpy.cumsum(x for x, y in numitems_numentries)
+    basket_entryoffset[1:] = numpy.cumsum(y for x, y in numitems_numentries)
+
+    destination = interpretation.destination(basket_itemoffset[-1], entrystop - entrystart)
+    
+    baskets = _baskets(dataset, colindex, entrystart, entrystop)
+    for j, (globalstart, globalstop, localstart, localstop, basketstart, basketstop, data, byteoffsets) in enumerate(baskets):
+        source = interpretation.fromroot(data, byteoffsets, basketstart, basketstop)
+
+        expecteditems = basket_itemoffset[j + 1] - basket_itemoffset[j]
+        source_numitems = interpretation.source_numitems(source)
+
+        expectedentries = basket_entryoffset[j + 1] - basket_entryoffset[j]
+        source_numentries = basketstop - basketstart
+
+        if j + 1 == len(numitems_numentries):
+            if expecteditems > source_numitems:
+                basket_itemoffset[j + 1] -= expecteditems - source_numitems
+            if expectedentries > source_numentries:
+                basket_entryoffset[j + 1] -= expectedentries - source_numentries
+
+        elif j == 0:
+            if expecteditems > source_numitems:
+                basket_itemoffset[j] += expecteditems - source_numitems
+            if expectedentries > source_numentries:
+                basket_entryoffset[j] += expectedentries - source_numentries
+
+        interpretation.fill(source,
+                            destination,
+                            basket_itemoffset[j],
+                            basket_itemoffset[j + 1],
+                            basket_entryoffset[j],
+                            basket_entryoffset[j + 1])
+
+    clipped = interpretation.clip(destination,
+                                  basket_itemoffset[0],
+                                  basket_itemoffset[-1],
+                                  basket_entryoffset[0],
+                                  basket_entryoffset[-1])
+
+    return interpretation.finalize(clipped, TBranch())
 
 class FileArray(object):
     @classmethod

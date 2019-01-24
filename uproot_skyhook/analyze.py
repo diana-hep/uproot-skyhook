@@ -44,6 +44,8 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
     for branchname, uprootbranch in uprootfile[treepath].iteritems(recursive=True):
         if uprootbranch.numbaskets != uprootbranch._numgoodbaskets:
             raise NotImplementedError("branch recovery not handled by uproot-skyhook yet")
+        if numpy.uint8(uprootbranch._tree_iofeatures) & numpy.uint8(uproot.const.kGenerateOffsetMap) != 0:
+            raise NotImplementedError("branch feature kGenerateOffsetMap not handled by uproot-skyhook yet")
 
         local_offsets = uprootbranch._fBasketEntry[: uprootbranch.numbaskets + 1]
         page_seeks = numpy.empty(uprootbranch.numbaskets, dtype="<u8")
