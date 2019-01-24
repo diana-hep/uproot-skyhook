@@ -119,6 +119,7 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
             uncompressedbytes = uncompressedbytes[:basket_page_offsets[-1]].copy()
 
         if (basket_data_borders == 0).all():
+            basket_keylens = None
             basket_data_borders = None
 
         if compression is None:

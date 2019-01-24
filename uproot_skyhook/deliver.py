@@ -104,8 +104,8 @@ def array(dataset, colname, entrystart=None, entrystop=None):
                     basketdata = numpy.concatenate(basketdata)
 
                 start, stop = branch.local_offsets[basketi] + globalbot, branch.local_offsets[basketi + 1] + globalbot
-
-
+                start, stop, basketdata
+                print(start, stop, branch.basket_data_borders, branch.basket_keylens)
 
 
 

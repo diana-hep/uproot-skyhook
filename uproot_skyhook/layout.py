@@ -94,7 +94,6 @@ class Branch(Layout):
     compression = uproot_skyhook.lazyobject.lazyproperty("compression", lambda x: compressions[x])
     uncompressedbytes = uproot_skyhook.lazyobject.lazyproperty_numpy("uncompressedbytes")
     basket_page_offsets = uproot_skyhook.lazyobject.lazyproperty_numpy("basket_page_offsets")
-    basket_keylens = uproot_skyhook.lazyobject.lazyproperty_numpy("basket_keylens")
 
     @property
     def compressedbytes(self):
@@ -108,6 +107,19 @@ class Branch(Layout):
     @compressedbytes.setter
     def compressedbytes(self, value):
         self._compressedbytes = value
+
+    @property
+    def basket_keylens(self):
+        if hasattr(self, "_basket_keylens"):
+            return self._basket_keylens
+        if self._flatbuffers.BasketKeylensLength() == 0:
+            return None
+        self._basket_keylens = self._flatbuffers.BasketKeylensAsNumpy()
+        return self._basket_keylens
+
+    @basket_keylens.setter
+    def basket_keylens(self, value):
+        self._basket_keylens = value
 
     @property
     def basket_data_borders(self):
@@ -124,7 +136,7 @@ class Branch(Layout):
 
     @classmethod
     def empty(cls):
-        return cls([0], [], none, None, [], [0], [], None)
+        return cls([0], [], none, None, [], [0], None, None)
 
     def __init__(self, local_offsets, page_seeks, compression, compressedbytes, uncompressedbytes, basket_page_offsets, basket_keylens, basket_data_borders):
         local_offsets = numpy.array(local_offsets, dtype="<u8", copy=False)
@@ -163,10 +175,13 @@ class Branch(Layout):
             raise ValueError("len(local_offsets) must be equal to len(basket_page_offsets)")
         self.basket_page_offsets = basket_page_offsets
 
-        basket_keylens = numpy.array(basket_keylens, dtype="<u4", copy=False)
-        if len(basket_keylens) != len(basket_page_offsets) - 1:
-            raise ValueError("len(basket_keylens) must be equal to len(basket_page_offsets) - 1")
-        self.basket_keylens = basket_keylens
+        if basket_keylens is None:
+            self.basket_keylens = None
+        else:
+            basket_keylens = numpy.array(basket_keylens, dtype="<u4", copy=False)
+            if len(basket_keylens) != len(basket_page_offsets) - 1:
+                raise ValueError("len(basket_keylens) must be equal to len(basket_page_offsets) - 1")
+            self.basket_keylens = basket_keylens
 
         if basket_data_borders is None:
             self.basket_data_borders = None
@@ -177,7 +192,15 @@ class Branch(Layout):
                 raise ValueError("len(basket_data_borders) must be equal to len(basket_page_offsets) - 1")
 
     def __eq__(self, other):
-        return self is other or (isinstance(other, Branch) and numpy.array_equal(self.local_offsets, other.local_offsets) and numpy.array_equal(self.page_seeks, other.page_seeks) and self.compression == other.compression and numpy.array_equal(self.compressedbytes, other.compressedbytes) and numpy.array_equal(self.uncompressedbytes, other.uncompressedbytes) and numpy.array_equal(self.basket_page_offsets, other.basket_page_offsets) and numpy.array_equal(self.basket_keylens, other.basket_keylens) and ((isinstance(self.basket_data_borders, numpy.ndarray) and isinstance(other.basket_data_borders, numpy.ndarray) and numpy.array_equal(self.basket_data_borders, other.basket_data_borders)) or (self.basket_data_borders is None and other.basket_data_borders is None)))
+        return self is other or (isinstance(other, Branch) and
+                                 numpy.array_equal(self.local_offsets, other.local_offsets) and
+                                 numpy.array_equal(self.page_seeks, other.page_seeks) and
+                                 self.compression == other.compression and
+                                 numpy.array_equal(self.compressedbytes, other.compressedbytes) and
+                                 numpy.array_equal(self.uncompressedbytes, other.uncompressedbytes) and
+                                 numpy.array_equal(self.basket_page_offsets, other.basket_page_offsets) and 
+                                 ((isinstance(self.basket_keylens, numpy.ndarray) and isinstance(other.basket_keylens, numpy.ndarray) and numpy.array_equal(self.basket_keylens, other.basket_keylens)) or (self.basket_keylens is None and other.basket_keylens is None)) and
+                                 ((isinstance(self.basket_data_borders, numpy.ndarray) and isinstance(other.basket_data_borders, numpy.ndarray) and numpy.array_equal(self.basket_data_borders, other.basket_data_borders)) or (self.basket_data_borders is None and other.basket_data_borders is None)))
 
     def _toflatbuffers(self, builder):
         uproot_skyhook.layout_generated.Branch.BranchStartLocalOffsetsVector(builder, len(self.local_offsets))
@@ -206,10 +229,11 @@ class Branch(Layout):
         builder.Bytes[builder.head : builder.head + self.basket_page_offsets.nbytes] = self.basket_page_offsets.tostring()
         basket_page_offsets = builder.EndVector(len(self.basket_page_offsets))
 
-        uproot_skyhook.layout_generated.Branch.BranchStartBasketPageOffsetsVector(builder, len(self.basket_keylens))
-        builder.head = builder.head - self.basket_keylens.nbytes
-        builder.Bytes[builder.head : builder.head + self.basket_keylens.nbytes] = self.basket_keylens.tostring()
-        basket_keylens = builder.EndVector(len(self.basket_keylens))
+        if self.basket_keylens is not None:
+            uproot_skyhook.layout_generated.Branch.BranchStartBasketKeylensVector(builder, len(self.basket_keylens))
+            builder.head = builder.head - self.basket_keylens.nbytes
+            builder.Bytes[builder.head : builder.head + self.basket_keylens.nbytes] = self.basket_keylens.tostring()
+            basket_keylens = builder.EndVector(len(self.basket_keylens))
 
         if self.basket_data_borders is not None:
             uproot_skyhook.layout_generated.Branch.BranchStartBasketDataBordersVector(builder, len(self.basket_data_borders))
@@ -225,7 +249,8 @@ class Branch(Layout):
             uproot_skyhook.layout_generated.Branch.BranchAddCompressedbytes(builder, compressedbytes)
         uproot_skyhook.layout_generated.Branch.BranchAddUncompressedbytes(builder, uncompressedbytes)
         uproot_skyhook.layout_generated.Branch.BranchAddBasketPageOffsets(builder, basket_page_offsets)
-        uproot_skyhook.layout_generated.Branch.BranchAddBasketKeylens(builder, basket_keylens)
+        if self.basket_keylens is not None:
+            uproot_skyhook.layout_generated.Branch.BranchAddBasketKeylens(builder, basket_keylens)
         if self.basket_data_borders is not None:
             uproot_skyhook.layout_generated.Branch.BranchAddBasketDataBorders(builder, basket_data_borders)
         return uproot_skyhook.layout_generated.Branch.BranchEnd(builder)
