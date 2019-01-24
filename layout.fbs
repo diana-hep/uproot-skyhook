@@ -42,6 +42,7 @@ table Branch {
   local_offsets: [ulong] (required);
   page_seeks: [ulong] (required);
   compression: Compression;
+  iscompressed: [bool];
   compressedbytes: [uint];
   uncompressedbytes: [uint] (required);
   basket_page_offsets: [uint] (required);

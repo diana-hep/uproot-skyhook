@@ -96,6 +96,19 @@ class Branch(Layout):
     basket_page_offsets = uproot_skyhook.lazyobject.lazyproperty_numpy("basket_page_offsets")
 
     @property
+    def iscompressed(self):
+        if hasattr(self, "_iscompressed"):
+            return self._iscompressed
+        if self.compression == none:
+            return None
+        self._iscompressed = self._flatbuffers.IscompressedAsNumpy()
+        return self._iscompressed
+
+    @iscompressed.setter
+    def iscompressed(self, value):
+        self._iscompressed = value
+
+    @property
     def compressedbytes(self):
         if hasattr(self, "_compressedbytes"):
             return self._compressedbytes
@@ -136,9 +149,9 @@ class Branch(Layout):
 
     @classmethod
     def empty(cls):
-        return cls([0], [], none, None, [], [0], None, None)
+        return cls([0], [], none, None, None, [], [0], None, None)
 
-    def __init__(self, local_offsets, page_seeks, compression, compressedbytes, uncompressedbytes, basket_page_offsets, basket_keylens, basket_data_borders):
+    def __init__(self, local_offsets, page_seeks, compression, iscompressed, compressedbytes, uncompressedbytes, basket_page_offsets, basket_keylens, basket_data_borders):
         local_offsets = numpy.array(local_offsets, dtype="<u8", copy=False)
         if len(local_offsets) == 0 or local_offsets[0] != 0:
             raise ValueError("local_offsets must start with 0")
@@ -157,8 +170,13 @@ class Branch(Layout):
 
         self.uncompressedbytes = numpy.array(uncompressedbytes, dtype="<u4", copy=False)
         if self.compression == none:
+            self.iscompressed = None
             self.compressedbytes = self.uncompressedbytes
         else:
+            iscompressed = numpy.array(iscompressed, dtype=numpy.bool_, copy=False)
+            if len(iscompressed) != len(page_seeks):
+                raise ValueError("len(iscompressed) must be equal to len(page_seeks)")
+            self.iscompressed = iscompressed
             compressedbytes = numpy.array(compressedbytes, dtype="<u4", copy=False)
             if len(compressedbytes) != len(page_seeks):
                 raise ValueError("len(compressedbytes) must be equal to len(page_seeks)")
@@ -196,6 +214,7 @@ class Branch(Layout):
                                  numpy.array_equal(self.local_offsets, other.local_offsets) and
                                  numpy.array_equal(self.page_seeks, other.page_seeks) and
                                  self.compression == other.compression and
+                                 ((isinstance(self.iscompressed, numpy.ndarray) and isinstance(other.iscompressed, numpy.ndarray) and numpy.array_equal(self.iscompressed, other.iscompressed)) or (self.iscompressed is None and other.iscompressed is None)) and
                                  numpy.array_equal(self.compressedbytes, other.compressedbytes) and
                                  numpy.array_equal(self.uncompressedbytes, other.uncompressedbytes) and
                                  numpy.array_equal(self.basket_page_offsets, other.basket_page_offsets) and 
@@ -214,6 +233,11 @@ class Branch(Layout):
         page_seeks = builder.EndVector(len(self.page_seeks))
 
         if self.compression != none:
+            uproot_skyhook.layout_generated.Branch.BranchStartIscompressedVector(builder, len(self.iscompressed))
+            builder.head = builder.head - self.iscompressed.nbytes
+            builder.Bytes[builder.head : builder.head + self.iscompressed.nbytes] = self.iscompressed.tostring()
+            iscompressed = builder.EndVector(len(self.iscompressed))
+
             uproot_skyhook.layout_generated.Branch.BranchStartCompressedbytesVector(builder, len(self.compressedbytes))
             builder.head = builder.head - self.compressedbytes.nbytes
             builder.Bytes[builder.head : builder.head + self.compressedbytes.nbytes] = self.compressedbytes.tostring()
@@ -246,6 +270,7 @@ class Branch(Layout):
         uproot_skyhook.layout_generated.Branch.BranchAddPageSeeks(builder, page_seeks)
         uproot_skyhook.layout_generated.Branch.BranchAddCompression(builder, self.compression.value)
         if self.compression != none:
+            uproot_skyhook.layout_generated.Branch.BranchAddIscompressed(builder, iscompressed)
             uproot_skyhook.layout_generated.Branch.BranchAddCompressedbytes(builder, compressedbytes)
         uproot_skyhook.layout_generated.Branch.BranchAddUncompressedbytes(builder, uncompressedbytes)
         uproot_skyhook.layout_generated.Branch.BranchAddBasketPageOffsets(builder, basket_page_offsets)

@@ -46,13 +46,13 @@ class Test(unittest.TestCase):
         from uproot_skyhook.layout import zlib, Branch, File, Column, Dataset
         from uproot import asdtype, asjagged, asstlbitset
 
-        branch1 = Branch([0, 100, 1000], [123, 1234], zlib, [100, 100], [200, 200], [0, 1, 2], [12, 13], None)
-        branch2 = Branch([0, 1000], [12345], zlib, [100], [200], [0, 1], [12], None)
-        branch3 = Branch([0, 100, 1000], [123456, 1234567], zlib, [100, 100], [200, 200], [0, 1, 2], [12, 13], [125, 150])
+        branch1 = Branch([0, 100, 1000], [123, 1234], zlib, [True, False], [100, 100], [200, 200], [0, 1, 2], [12, 13], None)
+        branch2 = Branch([0, 1000], [12345], zlib, [True], [100], [200], [0, 1], [12], None)
+        branch3 = Branch([0, 100, 1000], [123456, 1234567], zlib, [False, True], [100, 100], [200, 200], [0, 1, 2], [12, 13], [125, 150])
 
-        branch4 = Branch([0, 100, 1000], [123, 1234], zlib, [100, 100], [200, 200], [0, 1, 2], [12, 13], None)
-        branch5 = Branch([0, 1000], [12345], zlib, [100], [200], [0, 1], [12], None)
-        branch6 = Branch([0, 100, 1000], [123456, 1234567], zlib, [100, 100], [200, 200], [0, 1, 2], [12, 13], [125, 150])
+        branch4 = Branch([0, 100, 1000], [123, 1234], zlib, [True, False], [100, 100], [200, 200], [0, 1, 2], [12, 13], None)
+        branch5 = Branch([0, 1000], [12345], zlib, [True], [100], [200], [0, 1], [12], None)
+        branch6 = Branch([0, 100, 1000], [123456, 1234567], zlib, [False, True], [100, 100], [200, 200], [0, 1, 2], [12, 13], [125, 150])
 
         files = [File("file1", b"abbacdbad", [branch1, branch2, branch3]), File("file2", b"decafcafe", [branch4, branch5, branch6])]
 

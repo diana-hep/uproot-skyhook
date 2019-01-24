@@ -44,18 +44,10 @@ import lz4.block
 
 import uproot_skyhook.layout
 
-headersize = {
-    uproot_skyhook.layout.none: 0,
-    uproot_skyhook.layout.zlib: 9,
-    uproot_skyhook.layout.lzma: 9,
-    uproot_skyhook.layout.lz4: 9 + 8
-    }
-
 decompress = {
-    uproot_skyhook.layout.none: lambda x, uncompressed_size: x,
-    uproot_skyhook.layout.zlib: lambda x, uncompressed_size: zlib.decompress(x),
-    uproot_skyhook.layout.lzma: lambda x, uncompressed_size: lzma.decompress(x),
-    uproot_skyhook.layout.lz4: lz4.block.decompress
+    uproot_skyhook.layout.zlib: lambda x, uncompressed_size: numpy.frombuffer(zlib.decompress(x), dtype=numpy.uint8),
+    uproot_skyhook.layout.lzma: lambda x, uncompressed_size: numpy.frombuffer(lzma.decompress(x), dtype=numpy.uint8),
+    uproot_skyhook.layout.lz4: lambda x, uncompressed_size: numpy.frombuffer(lz4.block.decompress(x, uncompressed_size), dtype=numpy.uint8),
     }
 
 def _normalize_entrystartstop(dataset, entrystart, entrystop):
@@ -134,24 +126,19 @@ def _baskets(dataset, colindex, entrystart, entrystop):
                 basketstart -= 1
 
             for basketi in range(basketstart, basketstop):
-                pagefrom = branch.basket_page_offsets[basketi]
-                pageuntil = branch.basket_page_offsets[basketi + 1]
-
-                basket_compressedbytes = sum(branch.compressedbytes[pagei] for pagei in range(pagefrom, pageuntil)) + (pageuntil - pagefrom)*headersize[branch.compression]
-                basket_uncompressedbytes = sum(branch.uncompressedbytes[pagei] for pagei in range(pagefrom, pageuntil))
-                isuncompressed = (basket_compressedbytes == basket_uncompressedbytes)
-                print("isuncompressed", isuncompressed, basket_compressedbytes, basket_uncompressedbytes)
+                basket_uncompressedbytes = 0
 
                 basketdata = []
-                for pagei in range(pagefrom, pageuntil):
+                for pagei in range(branch.basket_page_offsets[basketi], branch.basket_page_offsets[basketi + 1]):
                     page_seek = branch.page_seeks[pagei]
                     compressedbytes = branch.compressedbytes[pagei]
                     uncompressedbytes = branch.uncompressedbytes[pagei]
                     compresseddata = filearray[page_seek : page_seek + compressedbytes]
-                    if isuncompressed:
+                    if branch.compression != uproot_skyhook.layout.none and branch.iscompressed[pagei]:
                         basketdata.append(decompress[branch.compression](compresseddata, uncompressedbytes))
                     else:
                         basketdata.append(compresseddata)
+                    basket_uncompressedbytes += uncompressedbytes
 
                 if len(basketdata) == 1:
                     basketdata = basketdata[0]

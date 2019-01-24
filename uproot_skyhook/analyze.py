@@ -42,11 +42,6 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
     columns = []
     branches = []
     for branchname, uprootbranch in uprootfile[treepath].iteritems(recursive=True):
-        if branchname != b"Af8":
-            continue
-
-        print(branchname)
-
         if uprootbranch.numbaskets != uprootbranch._numgoodbaskets:
             raise NotImplementedError("branch recovery not handled by uproot-skyhook yet")
         if numpy.uint8(uprootbranch._tree_iofeatures) & numpy.uint8(uproot.const.kGenerateOffsetMap) != 0:
@@ -55,6 +50,7 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
         local_offsets = uprootbranch._fBasketEntry[: uprootbranch.numbaskets + 1]
         page_seeks = numpy.empty(uprootbranch.numbaskets, dtype="<u8")
         compression = None
+        iscompressed = numpy.empty(uprootbranch.numbaskets, dtype=numpy.bool_)
         compressedbytes = numpy.empty(uprootbranch.numbaskets, dtype="<u4")
         uncompressedbytes = numpy.empty(uprootbranch.numbaskets, dtype="<u4")
         basket_page_offsets = numpy.empty(uprootbranch.numbaskets + 1, dtype="<u4")
@@ -63,8 +59,6 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
         basket_data_borders = numpy.zeros(uprootbranch.numbaskets, dtype="<u4")
 
         for i in range(uprootbranch.numbaskets):
-            print(i)
-
             source = uprootbranch._source.threadlocal()
             key = uprootbranch._basketkey(source, i, True)
             cursor = uproot.source.cursor.Cursor(key._fSeekKey + key._fKeylen)
@@ -72,11 +66,10 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
             basket_compressedbytes = key._fNbytes - key._fKeylen
             basket_uncompressedbytes = key._fObjlen
 
-            print("isuncompressed", basket_compressedbytes == basket_uncompressedbytes, basket_compressedbytes, basket_uncompressedbytes)
-
             if basket_compressedbytes == basket_uncompressedbytes:
                 pagei = basket_page_offsets[i]
                 page_seeks[pagei] = cursor.index
+                iscompressed[pagei] = False
                 compressedbytes[pagei] = basket_compressedbytes
                 uncompressedbytes[pagei] = basket_uncompressedbytes
                 pagei += 1
@@ -111,10 +104,12 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
                     # extremely rare, though possible, for numpages > numbaskets
                     if pagei >= len(page_seeks):
                         page_seeks = numpy.resize(page_seeks, int(len(page_seeks)*1.2))
+                        iscompressed = numpy.resize(iscompressed, int(len(iscompressed)*1.2))
                         compressedbytes = numpy.resize(compressedbytes, int(len(compressedbytes)*1.2))
                         uncompressedbytes = numpy.resize(uncompressedbytes, int(len(uncompressedbytes)*1.2))
 
                     page_seeks[pagei] = cursor.index
+                    iscompressed[pagei] = True
                     compressedbytes[pagei] = page_compressedbytes
                     uncompressedbytes[pagei] = page_uncompressedbytes
                     pagei += 1
@@ -131,6 +126,7 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
 
         if len(page_seeks) > basket_page_offsets[-1]:
             page_seeks = page_seeks[:basket_page_offsets[-1]].copy()
+            iscompressed = iscompressed[:basket_page_offsets[-1]].copy()
             compressedbytes = compressedbytes[:basket_page_offsets[-1]].copy()
             uncompressedbytes = uncompressedbytes[:basket_page_offsets[-1]].copy()
 
@@ -140,10 +136,12 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
 
         if compression is None:
             compression = uproot_skyhook.layout.none
+            iscompressed = None
+            compressedbytes = None
 
         colnames.append(branchname.decode("utf-8"))
         columns.append(uproot_skyhook.layout.Column(uprootbranch.interpretation, None if uprootbranch.title == b"" or uprootbranch.title is None else uprootbranch.title.decode("utf-8")))
-        branches.append(uproot_skyhook.layout.Branch(local_offsets, page_seeks, compression, compressedbytes, uncompressedbytes, basket_page_offsets, basket_keylens, basket_data_borders))
+        branches.append(uproot_skyhook.layout.Branch(local_offsets, page_seeks, compression, iscompressed, compressedbytes, uncompressedbytes, basket_page_offsets, basket_keylens, basket_data_borders))
         numentries = max(numentries, branches[-1].local_offsets[-1])
         
     file = uproot_skyhook.layout.File(filepath, uprootfile._context.tfile["_fUUID"], branches)
