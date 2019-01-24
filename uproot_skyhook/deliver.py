@@ -28,7 +28,28 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
+import zlib
+try:
+    import lzma
+except ImportError:
+    import backports.lzma as lzma
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
+
 import numpy
+import lz4.block
+
+import uproot_skyhook.layout
+
+decompress = {
+    uproot_skyhook.layout.none: lambda x, uncompressed_size: x,
+    uproot_skyhook.layout.zlib: lambda x, uncompressed_size: zlib.decompress(x),
+    uproot_skyhook.layout.lzma: lambda x, uncompressed_size: lzma.decompress(x),
+    uproot_skyhook.layout.lz4: lz4.block.decompress
+    }
 
 def array(dataset, colname, entrystart=0, entrystop=-1):
     if colname not in dataset.colnames:
@@ -49,3 +70,60 @@ def array(dataset, colname, entrystart=0, entrystop=-1):
     filestart, filestop = numpy.searchsorted(dataset.global_offsets, (entrystart, entrystop), side="left")
     if dataset.global_offsets[filestart] > entrystart:
         filestart -= 1
+
+    for filei in range(filestart, filestop):
+        file = dataset.files[filei]
+        branch = file.branches[colindex]
+
+        location = file.location if dataset.location_prefix is None else dataset.location_prefix + file.location
+        with FileArray.open(location) as filearray:
+            globalbot, globaltop = dataset.global_offsets[filei], dataset.global_offsets[filei + 1]
+            localstart, localstop = entrystart - globalbot, entrystop - globalbot
+
+            basketstart, basketstop = numpy.searchsorted(branch.local_offsets, (localstart, localstop), side="left")
+            if branch.local_offsets[basketstart] > localstart:
+                basketstart -= 1
+
+            for basketi in range(basketstart, basketstop):
+                basketdata = []
+                for pagei in range(branch.basket_page_offsets[basketi], branch.basket_page_offsets[basketi + 1]):
+                    page_seek = branch.page_seeks[pagei]
+                    compressedbytes = branch.compressedbytes[pagei]
+                    uncompressedbytes = branch.uncompressedbytes[pagei]
+                    compresseddata = filearray[page_seek : page_seek + compressedbytes]
+                    basketdata.append(decompress[branch.compression](compresseddata, uncompressedbytes))
+
+                if len(basketdata) == 1:
+                    basketdata = basketdata[0]
+                else:
+                    basketdata = numpy.concatenate(basketdata)
+
+                print(basketdata.view(">f8"))
+
+
+
+
+class FileArray(object):
+    @classmethod
+    def open(cls, location):
+        parsed = urlparse(location)
+        if parsed.scheme == "file" or len(parsed.scheme) == 0:
+            return MemmapFileArray(os.path.expanduser(parsed.netloc + parsed.path))
+        else:
+            raise NotImplementedError(parsed.scheme)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+class MemmapFileArray(FileArray):
+    def __init__(self, location):
+        self._data = numpy.memmap(location, dtype=numpy.uint8, mode="r")
+
+    def __getitem__(self, slice):
+        return self._data[slice]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self._data

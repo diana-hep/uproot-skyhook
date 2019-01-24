@@ -64,8 +64,6 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
             basket_uncompressedbytes = key._fObjlen
             
             if basket_compressedbytes == basket_uncompressedbytes:
-                if compression is not None and compression != uproot_skyhook.layout.none:
-                    raise ValueError("different compression used by different branches")
                 pagei = basket_page_offsets[i]
                 page_seeks[pagei] = cursor.index
                 compressedbytes[pagei] = basket_compressedbytes
@@ -82,15 +80,15 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
                     page_uncompressedbytes = u1 + (u2 << 8) + (u3 << 16)
                     if algo == b"ZL":
                         if compression is not None and compression != uproot_skyhook.layout.zlib:
-                            raise ValueError("different compression used by different branches")
+                            raise ValueError("different compression used by different baskets")
                         compression = uproot_skyhook.layout.zlib
                     elif algo == b"XZ":
                         if compression is not None and compression != uproot_skyhook.layout.lzma:
-                            raise ValueError("different compression used by different branches")
+                            raise ValueError("different compression used by different baskets")
                         compression = uproot_skyhook.layout.lzma
                     elif algo == b"L4":
                         if compression is not None and compression != uproot_skyhook.layout.lz4:
-                            raise ValueError("different compression used by different branches")
+                            raise ValueError("different compression used by different baskets")
                         compression = uproot_skyhook.layout.lz4
                         cursor.skip(8)
                         page_compressedbytes -= 8
@@ -122,6 +120,9 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
 
         if (basket_data_borders == 0).all():
             basket_data_borders = None
+
+        if compression is None:
+            compression = uproot_skyhook.layout.none
 
         colnames.append(branchname.decode("utf-8"))
         columns.append(uproot_skyhook.layout.Column(uprootbranch.interpretation, None if uprootbranch.title == b"" or uprootbranch.title is None else uprootbranch.title.decode("utf-8")))
