@@ -64,6 +64,28 @@ class Test(unittest.TestCase):
     #     deserialized = uproot_skyhook.layout.frombuffer(serialized)
     #     assert deserialized == dataset
 
+    def test_serialization_dataset(self):
+        from uproot_skyhook.layout import zlib, Branch, File, Column, Dataset
+        from uproot import asdtype, asjagged, asstlbitset
+
+        branch1 = Branch([0, 100, 1000], [123, 1234], zlib, [100, 100], [200, 200], [0, 1, 2], None)
+        branch2 = Branch([0, 1000], [12345], zlib, [100], [200], [0, 1], None)
+        branch3 = Branch([0, 100, 1000], [123456, 1234567], zlib, [100, 100], [200, 200], [0, 1, 2], [125, 150])
+
+        branch4 = Branch([0, 100, 1000], [123, 1234], zlib, [100, 100], [200, 200], [0, 1, 2], None)
+        branch5 = Branch([0, 1000], [12345], zlib, [100], [200], [0, 1], None)
+        branch6 = Branch([0, 100, 1000], [123456, 1234567], zlib, [100, 100], [200, 200], [0, 1, 2], [125, 150])
+
+        files = [File("file1", b"abbacdbad", [branch1, branch2, branch3]), File("file2", b"decafcafe", [branch4, branch5, branch6])]
+
+        colnames = ["one", "two", "three"]
+        columns = [Column(asdtype(float)), Column(asjagged(asdtype(int))), Column(asstlbitset(17))]
+
+        dataset = Dataset("dataset", "treepath", colnames, columns, files, [0, 1000, 2000], "location_prefix")
+        serialized = uproot_skyhook.layout.tobuffer(dataset)
+        deserialized = uproot_skyhook.layout.frombuffer(serialized)
+        assert deserialized == dataset
+
     def roundtrip_interp(self, interp):
         builder = flatbuffers.Builder(1024)
         builder.Finish(uproot_skyhook.interpretation.toflatbuffers(builder, interp))

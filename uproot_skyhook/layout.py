@@ -33,8 +33,8 @@ import uproot
 import uproot_skyhook.interpretation
 import uproot_skyhook.lazyobject
 import uproot_skyhook.layout_generated.Compression
-import uproot_skyhook.layout_generated.Page
-import uproot_skyhook.layout_generated.Basket
+# import uproot_skyhook.layout_generated.Page
+# import uproot_skyhook.layout_generated.Basket
 import uproot_skyhook.layout_generated.Branch
 import uproot_skyhook.layout_generated.Column
 import uproot_skyhook.layout_generated.File
@@ -316,7 +316,7 @@ class Branch(Layout):
         uproot_skyhook.layout_generated.Branch.BranchStart(builder)
         uproot_skyhook.layout_generated.Branch.BranchAddLocalOffsets(builder, local_offsets)
         uproot_skyhook.layout_generated.Branch.BranchAddPageSeeks(builder, page_seeks)
-        uproot_skyhook.layout_generated.Branch.BranchAddCompression(builder, self.compression)
+        uproot_skyhook.layout_generated.Branch.BranchAddCompression(builder, self.compression.value)
         if self.compression != none:
             uproot_skyhook.layout_generated.Branch.BranchAddCompressedbytes(builder, compressedbytes)
         uproot_skyhook.layout_generated.Branch.BranchAddUncompressedbytes(builder, uncompressedbytes)
