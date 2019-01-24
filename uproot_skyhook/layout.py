@@ -317,28 +317,49 @@ class Dataset(Layout):
         if self.location_prefix != other.location_prefix:
             raise ValueError("dataset location_prefixes differ: {0} and {1}".format(repr(self.location_prefix), repr(other.location_prefix)))
 
-        # ??? have to think about this
+        otherlookup = {n: i for i, n in enumerate(other.colnames)}
 
         colnames = list(self.colnames)
         columns = list(self.columns)
-        lookup = {n: i for i, n in enumerate(colnames)}
         selfmap = list(range(len(colnames)))
-        othermap = []
+        othermap = [otherlookup.get(n, None) for n in colnames]
+        seen = set(colnames)
+
         for n, x in zip(other.colnames, other.columns):
-            if n not in lookup:
-                lookup[n] = len(colnames)
+            if n not in seen:
+                selfmap.append(None)
+                othermap.append(len(colnames))
                 colnames.append(n)
                 columns.append(x)
-                selfmap.append(None)
-            othermap.append(lookup[n])
                 
-        HERE # update the Files here
+        assert len(selfmap) == len(colnames)
+        assert len(othermap) == len(colnames)
+
+        files = []
+
+        for file in self.files:
+            branches = []
+            for i in selfmap:
+                if i is None:
+                    branches.append(Branch.empty())
+                else:
+                    branches.append(file.branches[i])
+            files.append(File(file.location, file.uuid, branches))
+
+        for file in other.files:
+            branches = []
+            for i in othermap:
+                if i is None:
+                    branches.append(Branch.empty())
+                else:
+                    branches.append(file.branches[i])
+            files.append(File(file.location, file.uuid, branches))
 
         global_offsets = numpy.array(len(self.global_offsets) + len(other.global_offsets), dtype="<u8")
         global_offsets[:len(self.global_offsets)] = self.global_offsets
         global_offsets[len(self.global_offsets):] = other.global_offsets + self.global_offsets[-1]
 
-
+        return Dataset(self.name, self.treepath, colnames, columns, files, global_offsets, location_prefix=self.location_prefix)
 
     def _toflatbuffers(self, builder):
         builder.branchnum = 0
