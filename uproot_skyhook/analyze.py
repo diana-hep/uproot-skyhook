@@ -120,6 +120,9 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
             compressedbytes = compressedbytes[:basket_page_offsets[-1]].copy()
             uncompressedbytes = uncompressedbytes[:basket_page_offsets[-1]].copy()
 
+        if (basket_data_borders == 0).all():
+            basket_data_borders = None
+
         colnames.append(branchname.decode("utf-8"))
         columns.append(uproot_skyhook.layout.Column(uprootbranch.interpretation, None if uprootbranch.title == b"" or uprootbranch.title is None else uprootbranch.title.decode("utf-8")))
         branches.append(uproot_skyhook.layout.Branch(local_offsets, page_seeks, compression, compressedbytes, uncompressedbytes, basket_page_offsets, basket_keylens, basket_data_borders))

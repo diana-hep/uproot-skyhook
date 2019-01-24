@@ -124,7 +124,7 @@ class Branch(Layout):
 
     @classmethod
     def empty(cls):
-        return cls([0], [], none, None, [], [0], None)
+        return cls([0], [], none, None, [], [0], [], None)
 
     def __init__(self, local_offsets, page_seeks, compression, compressedbytes, uncompressedbytes, basket_page_offsets, basket_keylens, basket_data_borders):
         local_offsets = numpy.array(local_offsets, dtype="<u8", copy=False)
