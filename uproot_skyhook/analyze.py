@@ -52,6 +52,7 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
         uncompressedbytes = numpy.empty(uprootbranch.numbaskets, dtype="<u4")
         basket_page_offsets = numpy.empty(uprootbranch.numbaskets + 1, dtype="<u4")
         basket_page_offsets[0] = 0
+        basket_keylens = numpy.zeros(uprootbranch.numbaskets, dtype="<u4")
         basket_data_borders = numpy.zeros(uprootbranch.numbaskets, dtype="<u4")
 
         for i in range(uprootbranch.numbaskets):
@@ -111,6 +112,7 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
 
                 basket_page_offsets[i + 1] = pagei
 
+            basket_keylens[i] = key._fKeylen
             basket_data_borders[i] = 0 if key._fObjlen == key.border else key.border
 
         if len(page_seeks) > basket_page_offsets[-1]:
@@ -120,7 +122,7 @@ def file(name, filepath, treepath, location_prefix=None, localsource=uproot.Memm
 
         colnames.append(branchname.decode("utf-8"))
         columns.append(uproot_skyhook.layout.Column(uprootbranch.interpretation, None if uprootbranch.title == b"" or uprootbranch.title is None else uprootbranch.title.decode("utf-8")))
-        branches.append(uproot_skyhook.layout.Branch(local_offsets, page_seeks, compression, compressedbytes, uncompressedbytes, basket_page_offsets, basket_data_borders))
+        branches.append(uproot_skyhook.layout.Branch(local_offsets, page_seeks, compression, compressedbytes, uncompressedbytes, basket_page_offsets, basket_keylens, basket_data_borders))
         numentries = max(numentries, branches[-1].local_offsets[-1])
         
     file = uproot_skyhook.layout.File(filepath, uprootfile._context.tfile["_fUUID"], branches)

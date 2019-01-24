@@ -45,6 +45,7 @@ table Branch {
   compressedbytes: [uint];
   uncompressedbytes: [uint] (required);
   basket_page_offsets: [uint] (required);
+  basket_keylens: [uint] (required);
   basket_data_borders: [uint];
 }
 
