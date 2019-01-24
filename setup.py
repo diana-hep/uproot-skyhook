@@ -53,7 +53,7 @@ setup(name = "uproot_skyhook",
       download_url = "https://github.com/diana-hep/uproot_skyhook/releases",
       license = "BSD 3-clause",
       test_suite = "tests",
-      install_requires = ["flatbuffers>=1.8.0", "uproot>3.3.5"],
+      install_requires = ["flatbuffers>=1.8.0", "uproot>3.3.5", "lz4", "backports.lzma;python_version<\"3.3\""],
       setup_requires = ["pytest-runner"],
       tests_require = ["pytest"],
       classifiers = [
